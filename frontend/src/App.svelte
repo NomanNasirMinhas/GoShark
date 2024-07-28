@@ -1,6 +1,7 @@
 <script>import "./app.css";
 import logo from "./assets/images/logo.png";
 import { Button } from 'flowbite-svelte';
+import { Label, Select } from 'flowbite-svelte';
 import {
   Greet,
   IsRoot,
@@ -10,6 +11,9 @@ import {
 } from "../wailsjs/go/main/App.js";
 import { onMount } from "svelte";
 import { writable } from "svelte/store";
+import { get } from 'svelte/store';
+// writeable interface array
+
 
 let isAdmin;
 let capture_started = false;
@@ -18,7 +22,7 @@ let capture_filter = "";
 let capture_iface = "";
 let capture_promisc = false;
 
-let interfaces = [];
+const interfaces = writable([]);
 // Create a new store with the given data.
 let requests = [];
 
@@ -90,7 +94,22 @@ onMount(async () => {
       console.log("No interfaces found");
     } else {
       console.log("ifaces_str", ifaces_str);
-      interfaces = ifaces_str.split(",");
+      let temp_interfaces = ifaces_str.split(",");
+      for (let i = 0; i < temp_interfaces.length; i++) {
+        if (temp_interfaces[i] != "") {
+          let obj = {
+            value: temp_interfaces[i].split(":")[0],
+            name: temp_interfaces[i],
+          };
+          interfaces.update((old) => [...old, obj]);
+          // interfaces.push({
+          //   value: temp_interfaces[i].split(":")[0],
+          //   name: temp_interfaces[i],
+          // })
+        }
+      }
+
+      console.log("interfaces", $interfaces.length);
     }
     const ws = new WebSocket("ws://localhost:4444/ws");
 
@@ -120,24 +139,21 @@ onMount(async () => {
     </div>
   {/if}
   <div class="input-box" id="input">
-    {#if interfaces.length > 0}
-      <select bind:value="{capture_iface}" class="input" id="iface">
-        {#each interfaces as iface}
-          {#if iface != ""}
-            <option value="{iface}">{iface}</option>
-          {/if}
-        {/each}
-      </select>
+    {#if $interfaces.length > 0}
+    <div style="width: 30%;">      
+        <Select class="mt-2" items={$interfaces} bind:value={capture_iface} />      
+    </div>      
     {/if}
-    <input autocomplete="off" bind:value="{capture_filter}" class="input" id="filter" placeholder="Filter" />
-    <input type="checkbox" bind:checked="{capture_promisc}" id="promisc" />
-    <label for="promisc">Promiscuous</label>
+    <div>
+      <input type="checkbox" bind:checked="{capture_promisc}" id="promisc" />
+      <label for="promisc">Promiscuous Mode</label>
+    </div>
 
-    <Button color="green"     
+    <Button color={capture_started ? "red" : "green"}
     on:click={async () => {
         if(!capture_started){          
           capture_started = true;
-          await StartCapture(capture_iface.split(":")[0], capture_promisc, capture_filter);
+          await StartCapture(capture_iface, capture_promisc, capture_filter);
         } else{
           capture_started = false;
           await StopCapture();
@@ -153,7 +169,7 @@ onMount(async () => {
         {#each requests as request}
         <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
           <p class="request">{request["full_packet_data"]}</p>
-          <button class="btn" style="width: 15%; height: 20px; border: 0px; align-self: auto;">Details</button>
+          <Button color="purple" style="width: 15%; height: 20px; border: 0px; align-self: auto;">Details</Button>
         </div>
 
         {/each}
@@ -208,6 +224,15 @@ onMount(async () => {
     height: 20px;
     line-height: 20px;
     margin: 1.5rem auto;
+  }
+
+  .input-box{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: center;
+    margin: 1.5rem auto;
+    width: 80%;
   }
 
   .input-box .btn {
