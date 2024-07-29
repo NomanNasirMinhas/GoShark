@@ -1,6 +1,7 @@
 <script>
   import logo from "./../assets/images/logo.jpeg";
   import { userStore } from "./../store/store";
+  import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, TableSearch } from 'flowbite-svelte';
   import {
     Navbar,
     NavBrand,
@@ -25,7 +26,7 @@
 
   let isAdmin;
   let capture_started = false;
-
+  let searchTerm = '';
   let capture_filter = "";
   let capture_iface = "";
   let capture_promisc = false;
@@ -34,6 +35,7 @@
   // Create a new store with the given data.
   let requests = [];
 
+  $: filteredItems = $userStore.requests.filter((item) => JSON.stringify(item).toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1);
   function parsePcapData(pcapData) {
     try {
       let packet = {};
@@ -92,8 +94,8 @@
         }
       }
 
-      console.log("packet", parsed_packet);
-      return packet;
+    //   console.log("packet", parsed_packet);
+      return parsed_packet;
     } catch (err) {
       console.log("Error in parsePcapData", err);
     }
@@ -106,14 +108,9 @@
       const ws = new WebSocket("ws://localhost:4444/ws");
 
       ws.addEventListener("message", (message) => {
-        let pcapData = parsePcapData(message.data);
-        // console.log("Parsed", parsePcapData(message.data));
-        // let pcapData = message.data;
+        let pcapData = parsePcapData(message.data);        
         console.log("Received message from server: ", pcapData);
-        // Parse the incoming message here
-        // const data = JSON.parse(message.data);
-        // Update the state.  That's literally it.  This can happen from anywhere:
-        // we're not in a component, and there's no nested context.
+        console.log("Layer 1", pcapData["layer_1"]);        
         userStore.update((state) => {
           state.requests.push(pcapData);
           return state;
@@ -171,12 +168,25 @@
         <div
           style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;"
         >
-          <p class="request">{request["full_packet_data"]}</p>
-          <Button
-            color="purple"
-            style="width: 15%; height: 20px; border: 0px; align-self: auto;"
+          <p class="request">
+            {#if request["layer_3"]}
+                <p>{request["layer_2"]["SrcIP"]}</p>
+                <p>{request["layer_3"]["SrcPort"].split("(")[0]}</p>
+                <p>{request["layer_2"]["DstIP"]}</p>
+                <p>{request["layer_3"]["DstPort"].split("(")[0]}</p>
+            {:else}
+                <p>{request["layer_1"]["SrcMAC"]}</p>
+                <p>{request["layer_1"]["DstMAC"]}</p>
+            {/if}
+            <!-- {Object.keys(request["layer_1"]).join(" ")} -->
+            <!-- {request["layer_3"] ? `${request["layer_2"]["SrcIP"]}\t${request["layer_3"]["SrcPort"].split("(")[0]} 
+          \t ${request["layer_2"]["DstIP"]}\t${request["layer_3"]["DstPort"].split("(")[0]}` : `${request["layer_1"]["SrcMAC"]}:${request["layer_1"]["DstMAC"]}`} -->
+          </p>
+          <!-- <Button
+            color="purple"    
+            size='sm'        
             >Details</Button
-          >
+          > -->
         </div>
       {/each}
     </div>
@@ -207,16 +217,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 80%;
+    width: 100%;
     border: #e2ebf0 1px solid;
     background-color: rgb(41, 1, 45);
     margin-bottom: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .packets_div {
     margin: 1.5rem auto;
-    width: 70%;
-    height: 500px;
+    width: 95%;
+    height: 95%;
     overflow-y: scroll;
     overflow-wrap: break-word;
     border: 1px solid #03104e;
