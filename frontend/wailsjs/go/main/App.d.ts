@@ -7,6 +7,6 @@ export function Greet(arg1:string):Promise<string>;
 
 export function IsRoot():Promise<boolean>;
 
-export function StartCapture(arg1:string,arg2:boolean,arg3:string):Promise<void>;
+export function StartCapture(arg1:string,arg2:boolean,arg3:string,arg4:boolean):Promise<void>;
 
 export function StopCapture():Promise<void>;

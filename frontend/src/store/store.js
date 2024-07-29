@@ -6,5 +6,5 @@ export const userStore = writable({
     capture_promisc: false,
   filter: '',
   requests: [],
-  
+  capture_export: false,
 });

@@ -19,6 +19,7 @@
   let isAdmin;
   let capture_started = false;
 
+  let capture_export = false;
   let capture_filter = "";
   let capture_iface = "";
   let capture_promisc = false;
@@ -96,12 +97,24 @@
           </div>
         </div>
 
+        <div class="flex flex-row justify-items-start">
+          <h1 style="font-size:medium; font-weight: bolder; width:300px">
+            Export Session to PCAP
+          </h1>
+          <div>
+            <Select items={[
+              { value: true, name: "Yes" },
+              { value: false, name: "No" },
+            ]} bind:value={capture_export} />
+          </div>
+        </div>
+
       </div>
       <Button
         color={capture_started ? "red" : "green"}
         disabled={!isAdmin || capture_iface == "" || capture_promisc == null}
         on:click={()=>{
-          userStore.update((old) => ({...old, capture_iface: capture_iface, capture_promisc: capture_promisc, filter: ''}));
+          userStore.update((old) => ({...old, capture_iface: capture_iface, capture_promisc: capture_promisc, filter: '', capture_export: capture_export}));
           navigate("/capture")
         }}
       >

@@ -218,7 +218,7 @@ func (a *App) GetAllDevices() string {
 	return devicesStr
 }
 
-func (a *App) StartCapture(iface string, promisc bool, filter string) {
+func (a *App) StartCapture(iface string, promisc bool, filter string, export bool) {
 	snaplen := int32(1600 * 2)
 
 	pcap_handle, err := pcap.OpenLive(iface, snaplen, promisc, pcap.BlockForever)
@@ -226,18 +226,20 @@ func (a *App) StartCapture(iface string, promisc bool, filter string) {
 		log.Panicln(err)
 	}
 	defer pcap_handle.Close()
-
-	current_time := time.Now().String()
-	file_name := fmt.Sprintf("output_%s.pcap", current_time)
-	println("Writing to file: ", file_name)
-	// Create pcap file and writer
-	f, err := os.Create(file_name)
-	if err != nil {
-		log.Fatal(err)
+	var w *pcapgo.Writer
+	if export {
+		current_time := time.Now().String()
+		file_name := fmt.Sprintf("output_%s.pcap", current_time)
+		println("Writing to file: ", file_name)
+		// Create pcap file and writer
+		f, err := os.Create(file_name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		w = pcapgo.NewWriter(f)
+		w.WriteFileHeader(uint32(snaplen), pcap_handle.LinkType())
 	}
-	defer f.Close()
-	w := pcapgo.NewWriter(f)
-	w.WriteFileHeader(uint32(snaplen), pcap_handle.LinkType())
 
 	mu.Lock()
 	handles = append(handles, pcap_handle)
@@ -252,9 +254,11 @@ func (a *App) StartCapture(iface string, promisc bool, filter string) {
 	source := gopacket.NewPacketSource(pcap_handle, pcap_handle.LinkType())
 	println("Packet Capture Started")
 	for packet := range source.Packets() {
-		err := w.WritePacket(packet.Metadata().CaptureInfo, packet.Data())
-		if err != nil {
-			log.Fatal(err)
+		if export {
+			err := w.WritePacket(packet.Metadata().CaptureInfo, packet.Data())
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		packetStr, err := PacketToJSON(packet)

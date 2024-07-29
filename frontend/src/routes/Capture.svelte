@@ -22,6 +22,7 @@
     let ac_hidden8 = true;
     let ac_current_packet = null;
     let capture_started = false;
+    let export_file = $userStore.capture_export;
     let searchTerm = '';
     let ws;
 
@@ -59,7 +60,7 @@
             console.log("WebSocket connection closed");
         });
 
-        StartCapture(capture_iface, capture_promisc, "");
+        StartCapture(capture_iface, capture_promisc, "", export_file);
         capture_started = true;
     }
 
@@ -75,7 +76,7 @@
             requests.set([]);
             connect();
             capture_started = true;
-            StartCapture(capture_iface, capture_promisc, "");
+            StartCapture(capture_iface, capture_promisc, "", export_file);
             console.log("Capture started");
         }
     }
