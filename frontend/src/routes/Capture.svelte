@@ -1,50 +1,46 @@
 <script>
     import logo from "./../assets/images/logo.jpeg";
     import { userStore } from "./../store/store";
-    import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, TableSearch } from 'flowbite-svelte';
-    import { Drawer, CloseButton, A } from 'flowbite-svelte';
+    import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
+    import { Drawer, CloseButton } from 'flowbite-svelte';
     import { InfoCircleSolid, ArrowRightOutline } from 'flowbite-svelte-icons';
-    import { Input, ButtonGroup } from 'flowbite-svelte';
+    import { Input } from 'flowbite-svelte';
     import { SearchSolid } from 'flowbite-svelte-icons';
-    import { sineIn } from 'svelte/easing';
-    import { Navbar, NavBrand, NavLi, NavUl, NavHamburger } from "flowbite-svelte";
+    import { Navbar, NavBrand, NavHamburger } from "flowbite-svelte";
     import { PlaySolid, StopSolid } from "flowbite-svelte-icons";
     import { Button } from "flowbite-svelte";
-    import { Label, Select } from "flowbite-svelte";
-    import { Greet, IsRoot, StartCapture, GetAllDevices, StopCapture } from "../../wailsjs/go/main/App.js";
+    import { Greet, StartCapture, StopCapture } from "../../wailsjs/go/main/App.js";
     import { onMount } from "svelte";
     import { writable, get } from "svelte/store";
+    import { sineIn } from 'svelte/easing';
+    import { l2_protocols } from "./../consts/protocols";
   
-    // Writable store for packet data
-    const requests = writable([]);
-  
+    const requests = writable([]);    
     let ac_hidden8 = true;
     let ac_transitionParamsBottom = { y: 320, duration: 200, easing: sineIn };
     let ac_current_packet;
-    let isAdmin;
     let capture_started = false;
     let searchTerm = '';
-
     let ws;
   
-    // Filtered items based on search term
     let filteredItems = [];
-    $: {
-      filteredItems = $requests.filter(item =>
-        JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    $: filteredItems = $requests.filter(item => 
+      JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase())
+    );
   
     let capture_iface = $userStore.capture_iface;
     let capture_promisc = $userStore.capture_promisc;
   
-    // Initialize WebSocket connection
+//     function getProtocolAcronym(protocolNumber) {
+//     return protocolNumber ? ;
+// }
+
     onMount(() => {
       connect();
     });
-
+  
     function connect(){
-        ws = new WebSocket("ws://localhost:4444/ws");
+      ws = new WebSocket("ws://localhost:4444/ws");
   
       ws.addEventListener("message", (message) => {
         let pcapData = JSON.parse(message.data);
@@ -70,7 +66,6 @@
       };
     }
   
-    // Function to start or stop packet capture
     const toggleCapture = async () => {
       if (capture_started) {
         console.log("Stopping capture");
@@ -127,30 +122,32 @@
           <SearchSolid slot="right" class="w-5 h-5 text-blue-500 dark:text-gray-400" />
         </Input>
       </div>
-  
       <div class="mb-6 mt-16 w-96 ml-16">
         <h3>Total Captured Packets: {$requests.length}</h3>
       </div>
     </div>
   
     <div class="packets_div">
-      <Table>
+      <Table class="wireshark-table">
         <TableHead>
-          <TableHeadCell>Timestamp</TableHeadCell>
-          <TableHeadCell>Source IP</TableHeadCell>
-          <TableHeadCell>Source Port</TableHeadCell>
-          <TableHeadCell>Destination IP</TableHeadCell>
-          <TableHeadCell>Destination Port</TableHeadCell>
+          <TableHeadCell>No.</TableHeadCell>
+          <TableHeadCell>Time</TableHeadCell>
+          <TableHeadCell>Source</TableHeadCell>
+          <TableHeadCell>Destination</TableHeadCell>
+          <TableHeadCell>Protocol</TableHeadCell>
+          <TableHeadCell>Length</TableHeadCell>
+
           <TableHeadCell>Details</TableHeadCell>
         </TableHead>
-        <TableBody tableBodyClass="divide-y">
-          {#each filteredItems as item}
-            <TableBodyRow style="height: 30px; padding: 0%;">
+        <TableBody>
+          {#each filteredItems as item, index}
+            <TableBodyRow class="wireshark-table-row" style="height: 30px; padding: 0%;">
+              <TableBodyCell>{index + 1}</TableBodyCell>
               <TableBodyCell>{item.timestamp}</TableBodyCell>
               <TableBodyCell>{item.ip?.SrcIP || 'N/A'}</TableBodyCell>
-              <TableBodyCell>{item.tcp?.SrcPort || 'N/A'}</TableBodyCell>
               <TableBodyCell>{item.ip?.DstIP || 'N/A'}</TableBodyCell>
-              <TableBodyCell>{item.tcp?.DstPort || 'N/A'}</TableBodyCell>
+              <TableBodyCell>{item.ip?.Protocol ? l2_protocols[item.ip?.Protocol.toString()] : "Unknown Protocol" || 'N/A'}</TableBodyCell>
+              <TableBodyCell>{item.length || 'N/A'}</TableBodyCell>
               <TableBodyCell>
                 <Button color="dark" size='xs' on:click={() => {
                   ac_current_packet = item;
@@ -176,6 +173,36 @@
       border: 1px solid #03104e;
       border-radius: 5px;
       padding: 10px;
+    }
+  
+    .wireshark-table {
+      width: 100%;
+      font-family: 'Consolas', monospace;
+      font-size: 14px;
+      border-collapse: collapse;
+    }
+  
+    .wireshark-table-head th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+      border-bottom: 1px solid #ccc;
+    }
+  
+    .wireshark-table-body tr:nth-child(odd) {
+      background-color: #f9f9f9;
+    }
+  
+    .wireshark-table-body tr:hover {
+      background-color: #eaeaea;
+    }
+  
+    .wireshark-table-cell {
+      padding: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+  
+    .wireshark-table-row {
+      cursor: pointer;
     }
   </style>
   
