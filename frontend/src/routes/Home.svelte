@@ -1,6 +1,7 @@
 <script>
   import logo from "./../assets/images/logo.jpeg";
   import { Button } from "flowbite-svelte";
+  import { userStore } from './../store/store';
   import { Label, Select } from "flowbite-svelte";
   import {
     Greet,
@@ -100,6 +101,7 @@
         color={capture_started ? "red" : "green"}
         disabled={!isAdmin || capture_iface == "" || capture_promisc == null}
         on:click={()=>{
+          userStore.update((old) => ({...old, capture_iface: capture_iface, capture_promisc: capture_promisc, filter: ''}));
           navigate("/capture")
         }}
       >
