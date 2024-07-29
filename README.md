@@ -1,8 +1,8 @@
-# README
+# GoShark
 
 ## About
 
-This is the official Wails Svelte template.
+GoLang based Wireless Network Analysis tool. This tool is designed to be a simple, easy to use, and fast wireless network analysis tool. It is designed to be used by network administrators, security professionals, and anyone else who needs to analyze wireless networks.
 
 ## Live Development
 
@@ -14,3 +14,22 @@ to this in your browser, and you can call your Go code from devtools.
 ## Building
 
 To build a redistributable, production mode package, use `wails build`.
+
+## Features (Planned)
+
+- [x] Capture Traffic on different interfaces
+- [x] Allow Easy Filtering
+- [ ] Export to PCAP
+- [ ] Import PCAP
+- [ ] Add Suricata Rules
+- [ ] Add Snort Rules
+- [ ] Add Yara Rules
+- [ ] Add File Detection
+- [ ] Add File Extraction
+- [ ] Add Base64 Detection
+- [ ] Add DNS Tunnel Detection
+- [ ] Add ARP Spoof Support
+- [ ] Add Port Scanner
+- [ ] Add TLS Proxy Support
+
+
