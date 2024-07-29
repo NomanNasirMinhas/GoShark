@@ -2,6 +2,11 @@
   import logo from "./../assets/images/logo.jpeg";
   import { userStore } from "./../store/store";
   import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, TableSearch } from 'flowbite-svelte';
+  import { Drawer, CloseButton, A } from 'flowbite-svelte';
+  import { InfoCircleSolid, ArrowRightOutline } from 'flowbite-svelte-icons';
+  import { Input, ButtonGroup } from 'flowbite-svelte';
+  import { SearchSolid } from 'flowbite-svelte-icons';
+  import { sineIn } from 'svelte/easing';
   import {
     Navbar,
     NavBrand,
@@ -23,6 +28,14 @@
   import { writable } from "svelte/store";
   import { get } from "svelte/store";
   // writeable interface array
+
+  let ac_hidden8 = true;
+  let ac_transitionParamsBottom = {
+    y: 320,
+    duration: 200,
+    easing: sineIn
+  };
+  let ac_current_packet;
 
   let isAdmin;
   let capture_started = false;
@@ -126,6 +139,20 @@
 </script>
 
 <main>
+    <Drawer placement="bottom" width="w-full" transitionType="fly" transitionParams={ac_transitionParamsBottom} bind:hidden={ac_hidden8} id="sidebar8">
+        <div class="flex items-center">
+          <h5 id="drawer-label" class="inline-flex items-center mb-4 text-base font-semibold text-gray-500 dark:text-gray-400">
+            <InfoCircleSolid class="w-5 h-5 me-2.5" />Info
+          </h5>
+          <CloseButton on:click={() => (ac_hidden8 = true)} class="mb-4 dark:text-white" />
+        </div>
+        <p class="max-w-lg mb-6 text-sm text-gray-500 dark:text-gray-400">
+          {ac_current_packet["full_packet_data"]}
+        </p>
+        <Button color="light" href="/">Learn more</Button>
+        <Button href="/" class="px-4">Get access <ArrowRightOutline class="w-5 h-5 ms-2" /></Button>
+      </Drawer>
+
   <Navbar>
     <NavBrand href="/">
       <img src={logo} class="me-3 h-6 sm:h-9" alt="Flowbite Logo" />
@@ -140,13 +167,13 @@
         color={capture_started ? "red" : "green"}
         on:click={async () => {
           if (capture_started) {
-            StopCapture();
+            await StopCapture();
             capture_started = false;
             
           } else {
-            StartCapture(capture_filter, capture_promisc, "");
-            capture_started = true;
             $userStore.requests = [];
+            capture_started = true;
+            await StartCapture(capture_filter, capture_promisc, "");
           }
         }}
       >
@@ -162,53 +189,48 @@
     </div>
   </Navbar>
 
-  {#if capture_started}
+  <div class="mb-6 mt-16 w-96 ml-16">    
+    <Input type="text" placeholder="Enter a filter" bind:value={searchTerm}>
+      <SearchSolid slot="right" class="w-5 h-5 text-blue-500 dark:text-gray-400" />
+    </Input>
+  </div>
+  <!-- {#if capture_started} -->
     <div class="packets_div">
-        <TableSearch placeholder="Search Packet" hoverable={true} bind:inputValue={searchTerm}>
+        <Table>
             <TableHead>
               <TableHeadCell>Source IP</TableHeadCell>
               <TableHeadCell>Source Port</TableHeadCell>
+              <TableHeadCell>L2-Protocol</TableHeadCell>
               <TableHeadCell>Destination IP</TableHeadCell>
-              <TableHeadCell>Destination Port</TableHeadCell>
+              <TableHeadCell>Destination Port</TableHeadCell>              
+              <TableHeadCell>Details</TableHeadCell>
             </TableHead>
             <TableBody tableBodyClass="divide-y">
-              {#each filteredItems as item}
-                <TableBodyRow>
+              {#each filteredItems as item}              
+                <TableBodyRow style="height: 30px; padding: 0%;">
                   <TableBodyCell>{item["layer_2"]["SrcIP"]}</TableBodyCell>
                   <TableBodyCell>{item["layer_3"]["SrcPort"].split("(")[0]}</TableBodyCell>
+                  <TableBodyCell>{item["layer_2"]["Protocol"].split("(")[0]}</TableBodyCell>
                   <TableBodyCell>{item["layer_2"]["DstIP"]}</TableBodyCell>
                   <TableBodyCell>{item["layer_3"]["DstPort"].split("(")[0]}</TableBodyCell>
+                    <TableBodyCell>
+                        <Button
+                        color="dark"
+                        size='xs'
+                        on:click={() => {
+                            ac_current_packet = item;
+                            ac_hidden8 = false;
+                        }}
+                        >
+                        Details
+                        </Button>
+                    </TableBodyCell>
                 </TableBodyRow>
               {/each}
             </TableBody>
-          </TableSearch>
-      <!-- {#each $userStore.requests as request}
-        <div
-          style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;"
-        >
-          <p class="request">
-            {#if request["layer_3"]}
-                <p>{request["layer_2"]["SrcIP"]}</p>
-                <p>{request["layer_3"]["SrcPort"].split("(")[0]}</p>
-                <p>{request["layer_2"]["DstIP"]}</p>
-                <p>{request["layer_3"]["DstPort"].split("(")[0]}</p>
-            {:else}
-                <p>{request["layer_1"]["SrcMAC"]}</p>
-                <p>{request["layer_1"]["DstMAC"]}</p>
-            {/if}
-             {Object.keys(request["layer_1"]).join(" ")} -->
-            <!-- {request["layer_3"] ? `${request["layer_2"]["SrcIP"]}\t${request["layer_3"]["SrcPort"].split("(")[0]} 
-          \t ${request["layer_2"]["DstIP"]}\t${request["layer_3"]["DstPort"].split("(")[0]}` : `${request["layer_1"]["SrcMAC"]}:${request["layer_1"]["DstMAC"]}`}
-          </p>
-          <Button
-            color="purple"    
-            size='sm'        
-            >Details</Button
-          > 
-        </div>
-      {/each} -->
+          </Table>      
     </div>
-  {/if}
+  <!-- {/if} -->
 </main>
 
 <style>
@@ -248,13 +270,13 @@
   .packets_div {
     margin: 1.5rem auto;
     width: 95%;
-    height: 95%;
+    max-height: 900px;
     overflow-y: scroll;
     overflow-wrap: break-word;
     border: 1px solid #03104e;
     border-radius: 5px;
     padding: 10px;
-    background-color: rgb(1, 29, 19);
+    /* background-color: rgb(1, 29, 19); */
   }
 
   .result {
