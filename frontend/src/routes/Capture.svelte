@@ -164,7 +164,25 @@
 
   {#if capture_started}
     <div class="packets_div">
-      {#each $userStore.requests as request}
+        <TableSearch placeholder="Search Packet" hoverable={true} bind:inputValue={searchTerm}>
+            <TableHead>
+              <TableHeadCell>Source IP</TableHeadCell>
+              <TableHeadCell>Source Port</TableHeadCell>
+              <TableHeadCell>Destination IP</TableHeadCell>
+              <TableHeadCell>Destination Port</TableHeadCell>
+            </TableHead>
+            <TableBody tableBodyClass="divide-y">
+              {#each filteredItems as item}
+                <TableBodyRow>
+                  <TableBodyCell>{item["layer_2"]["SrcIP"]}</TableBodyCell>
+                  <TableBodyCell>{item["layer_3"]["SrcPort"].split("(")[0]}</TableBodyCell>
+                  <TableBodyCell>{item["layer_2"]["DstIP"]}</TableBodyCell>
+                  <TableBodyCell>{item["layer_3"]["DstPort"].split("(")[0]}</TableBodyCell>
+                </TableBodyRow>
+              {/each}
+            </TableBody>
+          </TableSearch>
+      <!-- {#each $userStore.requests as request}
         <div
           style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;"
         >
@@ -178,17 +196,17 @@
                 <p>{request["layer_1"]["SrcMAC"]}</p>
                 <p>{request["layer_1"]["DstMAC"]}</p>
             {/if}
-            <!-- {Object.keys(request["layer_1"]).join(" ")} -->
+             {Object.keys(request["layer_1"]).join(" ")} -->
             <!-- {request["layer_3"] ? `${request["layer_2"]["SrcIP"]}\t${request["layer_3"]["SrcPort"].split("(")[0]} 
-          \t ${request["layer_2"]["DstIP"]}\t${request["layer_3"]["DstPort"].split("(")[0]}` : `${request["layer_1"]["SrcMAC"]}:${request["layer_1"]["DstMAC"]}`} -->
+          \t ${request["layer_2"]["DstIP"]}\t${request["layer_3"]["DstPort"].split("(")[0]}` : `${request["layer_1"]["SrcMAC"]}:${request["layer_1"]["DstMAC"]}`}
           </p>
-          <!-- <Button
+          <Button
             color="purple"    
             size='sm'        
             >Details</Button
-          > -->
+          > 
         </div>
-      {/each}
+      {/each} -->
     </div>
   {/if}
 </main>
