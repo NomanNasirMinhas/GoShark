@@ -121,27 +121,29 @@
         </div>
     </Navbar>
 
-    <!-- Search and Packet Count -->
-    <div class="flex flex-row justify-around mt-16 mb-6">
-        <div class="w-96">
-            <Input type="text" placeholder="Enter a filter" bind:value={searchTerm}>
-                <SearchSolid slot="right" class="w-5 h-5 text-blue-500 dark:text-gray-400" />
-            </Input>
-        </div>
-        <div class="w-96">
-            <h3>Total Captured Packets: {$requests.length}</h3>
-        </div>
-    </div>
-
+    
     <!-- Packets Table -->
     <div class="packets_div" id="packets_div">
+        <!-- Search and Packet Count -->
+        <div class="flex flex-row justify-between mb-6">
+            <div class="w-1/2">
+                <Input type="text" placeholder="Enter a filter" bind:value={searchTerm}>
+                    <SearchSolid slot="right" class="w-5 h-5 text-blue-500 dark:text-gray-400" />
+                </Input>
+            </div>
+            <!-- <div class="w-96"> -->
+                <p>Packets: {$requests.length}</p>
+            <!-- </div> -->
+        </div>
         <table>
             <thead>
                 <tr>
                     <th>No.</th>
                     <th>Timestamp</th>
                     <th>Source</th>
+                    <!-- <th>Source Addr</th> -->
                     <th>Destination</th>
+                    <!-- <th>Destination Addr</th> -->
                     <th>Protocol</th>
                     <th>Length</th>
                     <!-- <th>Details</th> -->
@@ -165,8 +167,10 @@
                     >
                         <td>{idx + 1}</td>
                         <td>{item.timestamp}</td>
-                        <td>{item.source_ip_4 || item.source_mac}</td>
-                        <td>{item.destination_ip_4 || item.destination_mac}</td>
+                        <td>{item.source_host || item.source_ip_4 || item.source_mac}</td>
+                        <!-- <td>{item.source_ip_4 || item.source_mac}</td> -->
+                        <td>{item.destination_host || item.destination_ip_4 || item.destination_mac}</td>
+                        <!-- <td>{item.destination_ip_4 || item.destination_mac}</td> -->
                         <td>
                             {item.protocol || item.l2_protocol}
                         </td>
@@ -191,7 +195,7 @@
     .packets_div {
         margin: 1.5rem auto;
         width: 95%;
-        max-height: 900px;
+        max-height: 100vh;
         overflow-y: scroll;
         overflow-wrap: break-word;
         border: 1px solid #03104e;

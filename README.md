@@ -19,7 +19,8 @@ To build a redistributable, production mode package, use `wails build`.
 
 - [x] Capture Traffic on different interfaces
 - [x] Allow Easy Filtering
-- [ ] Export to PCAP
+- [x] Export to PCAP
+- [x] IP Address Resultion
 - [ ] Import PCAP
 - [ ] Add Suricata Rules
 - [ ] Add Snort Rules

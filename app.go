@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/user"
+	"strconv"
 	"sync"
 	"time"
-
-	"encoding/csv"
-	"strconv"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -126,32 +126,34 @@ type PacketInfoArr struct {
 
 // PacketInfo holds the decoded information from the packet
 type PacketInfo struct {
-	Timestamp      time.Time        `json:"timestamp,omitempty"`
-	CaptureLength  int              `json:"cap_length,omitempty"`
-	Length         int              `json:"length,omitempty"`
-	Ethernet       *layers.Ethernet `json:"ethernet,omitempty"`
-	IP             *layers.IPv4     `json:"ip,omitempty"`
-	IPv6           *layers.IPv6     `json:"ipv6,omitempty"`
-	ARP            *layers.ARP      `json:"arp,omitempty"`
-	TCP            *layers.TCP      `json:"tcp,omitempty"`
-	UDP            *layers.UDP      `json:"udp,omitempty"`
-	ICMPv4         *layers.ICMPv4   `json:"icmpv4,omitempty"`
-	ICMPv6         *layers.ICMPv6   `json:"icmpv6,omitempty"`
-	Payload        []byte           `json:"payload,omitempty"`
-	DecodeError    error            `json:"decode_error,omitempty"`
-	SourceMAC      string           `json:"source_mac,omitempty"`
-	DestinationMac string           `json:"destination_mac,omitempty"`
-	SourceIP4      string           `json:"source_ip_4,omitempty"`
-	DestinationIP4 string           `json:"destination_ip_4,omitempty"`
-	SourceIP6      string           `json:"source_ip_6,omitempty"`
-	DestinationIP6 string           `json:"destination_ip_6,omitempty"`
-	SrcPort        string           `json:"src_port,omitempty"`
-	DstPort        string           `json:"dst_port,omitempty"`
-	AppProtocol    string           `json:"protocol,omitempty"`
-	L2Protocol     string           `json:"l2_protocol,omitempty"`
-	L1Protocol     string           `json:"l1_protocol,omitempty"`
-	Details        string           `json:"details,omitempty"`
-	Color          string           `json:"color,omitempty"`
+	Timestamp       time.Time        `json:"timestamp,omitempty"`
+	CaptureLength   int              `json:"cap_length,omitempty"`
+	Length          int              `json:"length,omitempty"`
+	Ethernet        *layers.Ethernet `json:"ethernet,omitempty"`
+	IP              *layers.IPv4     `json:"ip,omitempty"`
+	IPv6            *layers.IPv6     `json:"ipv6,omitempty"`
+	ARP             *layers.ARP      `json:"arp,omitempty"`
+	TCP             *layers.TCP      `json:"tcp,omitempty"`
+	UDP             *layers.UDP      `json:"udp,omitempty"`
+	ICMPv4          *layers.ICMPv4   `json:"icmpv4,omitempty"`
+	ICMPv6          *layers.ICMPv6   `json:"icmpv6,omitempty"`
+	Payload         []byte           `json:"payload,omitempty"`
+	DecodeError     error            `json:"decode_error,omitempty"`
+	SourceMAC       string           `json:"source_mac,omitempty"`
+	DestinationMac  string           `json:"destination_mac,omitempty"`
+	SourceIP4       string           `json:"source_ip_4,omitempty"`
+	DestinationIP4  string           `json:"destination_ip_4,omitempty"`
+	SourceIP6       string           `json:"source_ip_6,omitempty"`
+	DestinationIP6  string           `json:"destination_ip_6,omitempty"`
+	SrcPort         string           `json:"src_port,omitempty"`
+	DstPort         string           `json:"dst_port,omitempty"`
+	AppProtocol     string           `json:"protocol,omitempty"`
+	L2Protocol      string           `json:"l2_protocol,omitempty"`
+	L1Protocol      string           `json:"l1_protocol,omitempty"`
+	Details         string           `json:"details,omitempty"`
+	Color           string           `json:"color,omitempty"`
+	SourceHost      string           `json:"source_host,omitempty"`
+	DestinationHost string           `json:"destination_host,omitempty"`
 }
 
 // PacketToJSON converts a gopacket.Packet to a JSON string
@@ -177,6 +179,20 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 			packetInfo.IP = ipPacket
 			packetInfo.SourceIP4 = ipPacket.SrcIP.String()
 			packetInfo.DestinationIP4 = ipPacket.DstIP.String()
+			src_list, err := net.LookupAddr(packetInfo.SourceIP4)
+			if err == nil {
+				for _, hostname := range src_list {
+					packetInfo.SourceHost = hostname
+					break
+				}
+			}
+			dst_src, err := net.LookupAddr(packetInfo.DestinationIP4)
+			if err == nil {
+				for _, hostname := range dst_src {
+					packetInfo.DestinationHost = hostname
+					break
+				}
+			}
 			packetInfo.L2Protocol = l2Protocols[uint8(ipPacket.Protocol)]
 		}
 	}
