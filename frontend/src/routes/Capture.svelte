@@ -128,12 +128,12 @@
                     <th>Destination</th>
                     <th>Protocol</th>
                     <th>Length</th>
-                    <th>Details</th>
+                    <!-- <th>Details</th> -->
                 </tr>
             </thead>
             <tbody>
                 {#each filteredItems as item, idx}
-                    <tr style="height:10px; background-color: {item.color ? item.color : item.l2_protocol === "TCP" ? "#2596be" : "#e28743"}">
+                    <tr style="background-color: {item.color ? item.color : item.l2_protocol === "TCP" ? "#2596be" : "#e28743"}">
                         <td>{idx + 1}</td>
                         <td>{item.timestamp}</td>
                         <td>{item.source_ip_4 || item.source_mac}</td>
@@ -142,14 +142,14 @@
                             {item.protocol || item.l2_protocol}
                         </td>
                         <td>{item.length || 'N/A'}</td>
-                        <td>
+                        <!-- <td>
                             <Button color="dark" size="xs" on:click={() => {
                                 ac_current_packet = item;
                                 ac_hidden8 = false;
                             }}>
                                 Details
                             </Button>
-                        </td>
+                        </td> -->
                     </tr>
                 {/each}
             </tbody>
@@ -195,8 +195,9 @@
         border: 1px solid #ddd;
         padding: 8px;
         text-align: left;
-        font-size: 12px;
-        width: fit-content;
+        font-size: 10px;
+        width: min-content;
+        padding: 0px;
     }
     tbody tr:hover {
         background-color: #e0e0e0;

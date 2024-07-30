@@ -6,6 +6,10 @@ export function GetAllDevices() {
   return window['go']['main']['App']['GetAllDevices']();
 }
 
+export function GetPacketStream() {
+  return window['go']['main']['App']['GetPacketStream']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }

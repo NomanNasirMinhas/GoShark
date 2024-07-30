@@ -38,7 +38,7 @@ var upgrader = websocket.Upgrader{
 // Slice to store connected WebSocket clients
 var clients []*websocket.Conn
 var handles []*pcap.Handle
-var capturePackets []PacketInfo
+var capturePackets []gopacket.Packet
 var mu sync.Mutex
 var protocols_list map[string]map[int]string
 
@@ -320,7 +320,7 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 		packetStr, err := PacketToJSON(packet)
 
 		if err == nil {
-			// append(capturePackets, packetStr)
+			capturePackets = append(capturePackets, packet)
 
 			broadcastMessage(packetStr)
 		} else {
@@ -338,7 +338,12 @@ func (a *App) StopCapture() {
 		handle.Close()
 	}
 	handles = handles[:0]
+	capturePackets = capturePackets[:0]
 	println("Packet Capture Stopped")
+}
+
+func (a *App) GetPacketStream() []gopacket.Packet {
+	return capturePackets
 }
 
 func (a *App) Greet(name string) string {
