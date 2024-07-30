@@ -27,6 +27,9 @@
     let capture_started = false;
     let export_file = $userStore.capture_export;
     let searchTerm = '';
+    let active_row_color = "#063970";
+    let active_row_idx;
+
     let ws;
 
     // Reactive statements
@@ -119,13 +122,13 @@
     </Navbar>
 
     <!-- Search and Packet Count -->
-    <div class="flex flex-row justify-items-start mt-16">
-        <div class="mb-6 w-96 ml-16">
+    <div class="flex flex-row justify-around mt-16 mb-6">
+        <div class="w-96">
             <Input type="text" placeholder="Enter a filter" bind:value={searchTerm}>
                 <SearchSolid slot="right" class="w-5 h-5 text-blue-500 dark:text-gray-400" />
             </Input>
         </div>
-        <div class="mb-6 w-96 ml-16">
+        <div class="w-96">
             <h3>Total Captured Packets: {$requests.length}</h3>
         </div>
     </div>
@@ -146,7 +149,15 @@
             </thead>
             <tbody>
                 {#each filteredItems as item, idx}
-                    <tr style="background-color: {item.color ? item.color : item.l2_protocol === "TCP" ? "#2596be" : "#e28743"}"
+                    <tr style="background-color: {active_row_idx === idx ? active_row_color : item.color ? item.color : item.l2_protocol === "TCP" ? "#2596be" : "#e28743"};
+                    color: {active_row_idx === idx ? "#ffffff" : "#000000"};
+                    "
+                    on:mouseenter={()=>{                        
+                        active_row_idx = idx;
+                    }}
+                    on:mouseleave={()=>{                        
+                        active_row_idx = null;
+                    }}
                     on:click={()=>{
                         ac_current_packet = item;
                         ac_hidden8 = false;
@@ -225,7 +236,12 @@ td {
     width: min-content;
     padding: 0px;
     padding-left: 5px;
+    cursor: pointer;
 }
+
+/* td:hover {
+    background-color: #90bc78;
+} */
 
 tbody tr:hover {
     background-color: #e0e0e0;
