@@ -34,8 +34,9 @@ var upgrader = websocket.Upgrader{
 
 // Slice to store connected WebSocket clients
 var clients []*websocket.Conn
-var mu sync.Mutex
 var handles []*pcap.Handle
+var capturePackets []PacketInfo
+var mu sync.Mutex
 
 // Handler function for WebSocket connection
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -108,20 +109,38 @@ func (a *App) startup(ctx context.Context) {
 
 }
 
+type PacketInfoArr struct {
+	Packets []PacketInfo `json:"packets,omitempty"`
+}
+
 // PacketInfo holds the decoded information from the packet
 type PacketInfo struct {
-	Timestamp   time.Time        `json:"timestamp,omitempty"`
-	Length      int              `json:"length,omitempty"`
-	Ethernet    *layers.Ethernet `json:"ethernet,omitempty"`
-	IP          *layers.IPv4     `json:"ip,omitempty"`
-	IPv6        *layers.IPv6     `json:"ipv6,omitempty"`
-	ARP         *layers.ARP      `json:"arp,omitempty"`
-	TCP         *layers.TCP      `json:"tcp,omitempty"`
-	UDP         *layers.UDP      `json:"udp,omitempty"`
-	ICMPv4      *layers.ICMPv4   `json:"icmpv4,omitempty"`
-	ICMPv6      *layers.ICMPv6   `json:"icmpv6,omitempty"`
-	Payload     []byte           `json:"payload,omitempty"`
-	DecodeError error            `json:"decode_error,omitempty"`
+	Timestamp      time.Time        `json:"timestamp,omitempty"`
+	CaptureLength  int              `json:"cap_length,omitempty"`
+	Length         int              `json:"length,omitempty"`
+	Ethernet       *layers.Ethernet `json:"ethernet,omitempty"`
+	IP             *layers.IPv4     `json:"ip,omitempty"`
+	IPv6           *layers.IPv6     `json:"ipv6,omitempty"`
+	ARP            *layers.ARP      `json:"arp,omitempty"`
+	TCP            *layers.TCP      `json:"tcp,omitempty"`
+	UDP            *layers.UDP      `json:"udp,omitempty"`
+	ICMPv4         *layers.ICMPv4   `json:"icmpv4,omitempty"`
+	ICMPv6         *layers.ICMPv6   `json:"icmpv6,omitempty"`
+	Payload        []byte           `json:"payload,omitempty"`
+	DecodeError    error            `json:"decode_error,omitempty"`
+	SourceMAC      string           `json:"source_mac,omitempty"`
+	DestinationMac string           `json:"destination_mac,omitempty"`
+	SourceIP4      string           `json:"source_ip_4,omitempty"`
+	DestinationIP4 string           `json:"destination_ip_4,omitempty"`
+	SourceIP6      string           `json:"source_ip_6,omitempty"`
+	DestinationIP6 string           `json:"destination_ip_6,omitempty"`
+	SrcPort        string           `json:"src_port,omitempty"`
+	DstPort        string           `json:"dst_port,omitempty"`
+	AppProtocol    string           `json:"protocol,omitempty"`
+	L2Protocol     string           `json:"l2_protocol,omitempty"`
+	L1Protocol     string           `json:"l1_protocol,omitempty"`
+	Details        string           `json:"details,omitempty"`
+	Color          string           `json:"color,omitempty"`
 }
 
 // PacketToJSON converts a gopacket.Packet to a JSON string
@@ -129,22 +148,32 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 	var packetInfo PacketInfo
 
 	packetInfo.Timestamp = packet.Metadata().Timestamp
-	packetInfo.Length = len(packet.Data())
+	// Length is the size of the original packet.  Should always be >=
+	// CaptureLength.
+	packetInfo.Length = packet.Metadata().Length
+	packetInfo.CaptureLength = packet.Metadata().CaptureLength
 
 	// Decode layers and check for nil pointers
 	if ethLayer := packet.Layer(layers.LayerTypeEthernet); ethLayer != nil {
 		if ethernetPacket, ok := ethLayer.(*layers.Ethernet); ok {
 			packetInfo.Ethernet = ethernetPacket
+			packetInfo.SourceMAC = ethernetPacket.SrcMAC.String()
+			packetInfo.DestinationMac = ethernetPacket.DstMAC.String()
 		}
 	}
 	if ipLayer := packet.Layer(layers.LayerTypeIPv4); ipLayer != nil {
 		if ipPacket, ok := ipLayer.(*layers.IPv4); ok {
 			packetInfo.IP = ipPacket
+			packetInfo.SourceIP4 = ipPacket.SrcIP.String()
+			packetInfo.DestinationIP4 = ipPacket.DstIP.String()
+			packetInfo.L2Protocol = l2Protocols[uint8(ipPacket.Protocol)]
 		}
 	}
 	if ipv6Layer := packet.Layer(layers.LayerTypeIPv6); ipv6Layer != nil {
 		if ipv6Packet, ok := ipv6Layer.(*layers.IPv6); ok {
 			packetInfo.IPv6 = ipv6Packet
+			packetInfo.SourceIP6 = ipv6Packet.SrcIP.String()
+			packetInfo.DestinationIP6 = ipv6Packet.DstIP.String()
 		}
 	}
 	if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
@@ -155,6 +184,9 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 	if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 		if tcpPacket, ok := tcpLayer.(*layers.TCP); ok {
 			packetInfo.TCP = tcpPacket
+			packetInfo.SrcPort = tcpPacket.SrcPort.String()
+			packetInfo.DstPort = tcpPacket.DstPort.String()
+			packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
 		}
 	}
 	if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
@@ -171,6 +203,16 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 		if icmpv6Packet, ok := icmpv6Layer.(*layers.ICMPv6); ok {
 			packetInfo.ICMPv6 = icmpv6Packet
 		}
+	}
+
+	if packet.ApplicationLayer() != nil {
+		packetInfo.Details = string(packet.ApplicationLayer().Payload())
+	} else if packet.TransportLayer() != nil {
+		packetInfo.Details = string(packet.TransportLayer().LayerPayload())
+	} else if packet.NetworkLayer() != nil {
+		packetInfo.Details = string(packet.NetworkLayer().LayerPayload())
+	} else {
+		packetInfo.Details = string(packet.LinkLayer().LayerPayload())
 	}
 
 	// Get payload and check for nil
@@ -220,6 +262,7 @@ func (a *App) GetAllDevices() string {
 
 func (a *App) StartCapture(iface string, promisc bool, filter string, export bool) {
 	snaplen := int32(1600 * 2)
+	// var packets PacketInfoArr
 
 	pcap_handle, err := pcap.OpenLive(iface, snaplen, promisc, pcap.BlockForever)
 	if err != nil {
@@ -264,6 +307,8 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 		packetStr, err := PacketToJSON(packet)
 
 		if err == nil {
+			// append(capturePackets, packetStr)
+
 			broadcastMessage(packetStr)
 		} else {
 			println("Error Parsing Packet", err)

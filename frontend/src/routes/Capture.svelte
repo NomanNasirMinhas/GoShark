@@ -133,15 +133,13 @@
             </thead>
             <tbody>
                 {#each filteredItems as item, idx}
-                    <tr style="height:10px; background-color: {appProtocols[item.ip.Protocol]?.[item.tcp.DstPort]?.color || 'gray'}">
+                    <tr style="height:10px; background-color: {item.color || 'gray'}">
                         <td>{idx + 1}</td>
                         <td>{item.timestamp}</td>
-                        <td>{item.ip?.SrcIP || 'N/A'}</td>
-                        <td>{item.ip?.DstIP || 'N/A'}</td>
+                        <td>{item.source_ip_4 || item.source_mac}</td>
+                        <td>{item.destination_ip_4 || item.destination_mac}</td>
                         <td>
-                            {item.ip?.Protocol && item.tcp?.DstPort
-                                ? appProtocols[item.ip.Protocol]?.[item.tcp.DstPort]?.name || l2_protocols[item.ip.Protocol] || 'N/A'
-                                : 'N/A'}
+                            {item.protocol || item.l2_protocol}
                         </td>
                         <td>{item.length || 'N/A'}</td>
                         <td>
