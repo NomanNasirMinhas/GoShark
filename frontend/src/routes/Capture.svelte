@@ -56,7 +56,7 @@
         ws.addEventListener('error', err => console.log('WebSocket error:', err));
         ws.addEventListener('close', () => console.log('WebSocket connection closed'));
 
-        StartCapture(capture_iface, capture_promisc, '', export_file);
+        StartCapture(capture_iface, capture_promisc, '', export_file, false);
         capture_started = true;
     }
 
@@ -72,7 +72,7 @@
             requests.set([]);
             connect();
             capture_started = true;
-            StartCapture(capture_iface, capture_promisc, '', export_file);
+            StartCapture(capture_iface, capture_promisc, '', export_file, false);
             console.log('Capture started');
         }
     }

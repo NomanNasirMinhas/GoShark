@@ -289,18 +289,18 @@ func (a *App) GetAllDevices() string {
 	return devicesStr
 }
 
-func (a *App) StartCapture(iface string, promisc bool, filter string, export bool) {
+func (a *App) StartCapture(iface string, promisc bool, filter string, export bool, saveFiles bool) {
 	snaplen := int32(1600 * 2)
-	// var packets PacketInfoArr
 
 	pcap_handle, err := pcap.OpenLive(iface, snaplen, promisc, pcap.BlockForever)
 	if err != nil {
 		log.Panicln(err)
 	}
 	defer pcap_handle.Close()
+
 	var w *pcapgo.Writer
 	if export {
-		current_time := time.Now().String()
+		current_time := time.Now().Format("20060102-150405")
 		file_name := fmt.Sprintf("output_%s.pcap", current_time)
 		println("Writing to file: ", file_name)
 		// Create pcap file and writer
@@ -312,10 +312,6 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 		w = pcapgo.NewWriter(f)
 		w.WriteFileHeader(uint32(snaplen), pcap_handle.LinkType())
 	}
-
-	mu.Lock()
-	handles = append(handles, pcap_handle)
-	mu.Unlock()
 
 	if filter != "" {
 		if err := pcap_handle.SetBPFFilter(filter); err != nil {
@@ -333,16 +329,16 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 			}
 		}
 
+		if saveFiles {
+			saveFileFromPacket(packet)
+		}
+
 		packetStr, err := PacketToJSON(packet)
-
 		if err == nil {
-			capturePackets = append(capturePackets, packet)
-
 			broadcastMessage(packetStr)
 		} else {
 			println("Error Parsing Packet", err)
 		}
-
 	}
 }
 
