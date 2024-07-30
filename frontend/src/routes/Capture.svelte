@@ -1,9 +1,11 @@
 <script>
+// @ts-nocheck
+
     import logo from './../assets/images/logo.jpeg';
     import { userStore } from './../store/store';
     import {
         Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell,
-        Drawer, CloseButton, Input, Navbar, NavBrand, NavHamburger, Button
+        Drawer, CloseButton, Input, Navbar, NavBrand, NavHamburger, Button, Checkbox
     } from 'flowbite-svelte';
     import {
         InfoCircleSolid, ArrowRightOutline, SearchSolid,
@@ -19,6 +21,7 @@
     const ac_transitionParamsBottom = { y: 320, duration: 200, easing: sineIn };
 
     const requests = writable([]);
+    let scroll_to_bottom = true;
     let ac_hidden8 = true;
     let ac_current_packet = null;
     let capture_started = false;
@@ -42,8 +45,9 @@
 
         ws.addEventListener('message', event => {
             const pcapData = JSON.parse(event.data);
-            console.log('Received message from server:', pcapData);
+            // console.log('Received message from server:', pcapData);
             requests.update(old => [...old, pcapData]);
+            if (scroll_to_bottom) scrollToEnd();
         });
 
         ws.addEventListener('error', err => console.log('WebSocket error:', err));
@@ -69,6 +73,13 @@
             console.log('Capture started');
         }
     }
+
+    function scrollToEnd() {
+    const container = document.getElementById('packets_div');
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
 </script>
 
 <main>
@@ -94,6 +105,7 @@
             <span class="self-center whitespace-nowrap text-xl font-semibold dark:text-white">GoShark</span>
         </NavBrand>
         <div class="flex md:order-2">
+            <Checkbox class="mr-16" checked={scroll_to_bottom} on:click={()=> scroll_to_bottom = !scroll_to_bottom}>Scroll To End</Checkbox>
             <Button size="sm" color={capture_started ? 'red' : 'green'} on:click={toggleCapture}>
                 {#if capture_started}
                     <StopSolid class="w-5 h-5 me-2" /> Stop Capturing
@@ -101,6 +113,7 @@
                     <PlaySolid class="w-5 h-5 me-2" /> Start Capturing
                 {/if}
             </Button>
+
             <NavHamburger />
         </div>
     </Navbar>
@@ -118,7 +131,7 @@
     </div>
 
     <!-- Packets Table -->
-    <div class="packets_div">
+    <div class="packets_div" id="packets_div">
         <table>
             <thead>
                 <tr>
@@ -133,7 +146,12 @@
             </thead>
             <tbody>
                 {#each filteredItems as item, idx}
-                    <tr style="background-color: {item.color ? item.color : item.l2_protocol === "TCP" ? "#2596be" : "#e28743"}">
+                    <tr style="background-color: {item.color ? item.color : item.l2_protocol === "TCP" ? "#2596be" : "#e28743"}"
+                    on:click={()=>{
+                        ac_current_packet = item;
+                        ac_hidden8 = false;
+                    }}
+                    >
                         <td>{idx + 1}</td>
                         <td>{item.timestamp}</td>
                         <td>{item.source_ip_4 || item.source_mac}</td>
@@ -170,36 +188,47 @@
         padding: 10px;
     }
     table {
-        width: 100%;
-        border-collapse: collapse;
-        font-family: Arial, sans-serif;
-    }
-    thead {
-        background-color: #2c2c2c;
-        color: #ffffff;
-    }
-    th {
-        border: 1px solid #444;
-        padding: 10px;
-        text-align: left;
-        font-size: 14px;
-        font-weight: bold;
-    }
-    tbody tr:nth-child(even) {
-        background-color: #f5f5f5;
-    }
-    tbody tr:nth-child(odd) {
-        background-color: #ffffff;
-    }
-    td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-        font-size: 10px;
-        width: min-content;
-        padding: 0px;
-    }
-    tbody tr:hover {
-        background-color: #e0e0e0;
-    }    
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+}
+
+thead {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    position: sticky;
+    top: -20px;
+    z-index: 1; 
+}
+
+th {
+    border: 1px solid #444;
+    padding: 10px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f5f5f5;
+}
+
+tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    font-size: 12px;
+    width: min-content;
+    padding: 0px;
+    padding-left: 5px;
+}
+
+tbody tr:hover {
+    background-color: #e0e0e0;
+}
+
 </style>
