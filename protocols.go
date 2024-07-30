@@ -6,6 +6,12 @@ type Protocol struct {
 	Color string
 }
 
+type AppProtocol struct {
+	Type        int
+	Port        int
+	Description string
+}
+
 // l2Protocols maps protocol numbers to their corresponding Layer 2 protocol names.
 var l2Protocols = map[uint8]string{
 	0:   "HOPOPT",
@@ -229,4 +235,26 @@ func GetAppProtocol(protocolNumber uint8, port uint16) (string, string) {
 		}
 	}
 	return "Unknown", ""
+}
+
+// GenerateColor generates a unique color hex code for a given index.
+func GenerateColor(index int) string {
+	colors := []string{
+		"#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#33A1FF",
+		"#FF33FF", "#33FF8D", "#FFD133", "#FF6A33", "#33C1FF",
+		"#B8FF33", "#FF33D1", "#33FFD1", "#FFB833", "#FF33C1",
+	}
+	return colors[index%len(colors)]
+}
+
+// GetProtocolDescription returns the protocol description for a given type and port.
+func GetProtocolDescription(protocols map[string]map[int]string, protocolType int, port int) (string, string) {
+	protocol_type_str := l2Protocols[uint8(protocolType)]
+	if protocol, found := protocols[protocol_type_str]; found {
+		if description, found := protocol[port]; found {
+			color := GenerateColor(port)
+			return description, color
+		}
+	}
+	return "", ""
 }

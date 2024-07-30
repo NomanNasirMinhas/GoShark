@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"encoding/csv"
+	"strconv"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -37,6 +40,7 @@ var clients []*websocket.Conn
 var handles []*pcap.Handle
 var capturePackets []PacketInfo
 var mu sync.Mutex
+var protocols_list map[string]map[int]string
 
 // Handler function for WebSocket connection
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +108,13 @@ func (a *App) startup(ctx context.Context) {
 			fmt.Println("Server running on 4444 port")
 		}
 	}()
+
+	// Load protocols from CSV
+	var err error
+	protocols_list, err = LoadProtocols("ports.csv")
+	if err != nil {
+		fmt.Printf("Error loading protocols: %v\n", err)
+	}
 
 	a.ctx = ctx
 
@@ -186,7 +197,9 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 			packetInfo.TCP = tcpPacket
 			packetInfo.SrcPort = tcpPacket.SrcPort.String()
 			packetInfo.DstPort = tcpPacket.DstPort.String()
-			packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
+			// packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
+			// println("Destination Port", int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
+			packetInfo.AppProtocol, packetInfo.Color = GetProtocolDescription(protocols_list, int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
 		}
 	}
 	if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
@@ -330,4 +343,43 @@ func (a *App) StopCapture() {
 
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+// LoadProtocols loads the protocols from a CSV file into a map.
+func LoadProtocols(filePath string) (map[string]map[int]string, error) {
+	protocols := make(map[string]map[int]string)
+
+	// Open the CSV file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	// Create a new CSV reader
+	reader := csv.NewReader(file)
+
+	// Read all records from the CSV
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	// Skip the header
+	for _, record := range records[1:] {
+		protocolType := record[0]
+		port, err := strconv.Atoi(record[1])
+		if err != nil {
+			continue
+		}
+		description := record[2]
+
+		// Initialize the map for the protocol type if not already done
+		if _, ok := protocols[protocolType]; !ok {
+			protocols[protocolType] = make(map[int]string)
+		}
+		protocols[protocolType][port] = description
+	}
+
+	return protocols, nil
 }

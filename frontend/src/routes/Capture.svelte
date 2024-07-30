@@ -133,7 +133,7 @@
             </thead>
             <tbody>
                 {#each filteredItems as item, idx}
-                    <tr style="height:10px; background-color: {item.color || 'gray'}">
+                    <tr style="height:10px; background-color: {item.color ? item.color : item.l2_protocol === "TCP" ? "#2596be" : "#e28743"}">
                         <td>{idx + 1}</td>
                         <td>{item.timestamp}</td>
                         <td>{item.source_ip_4 || item.source_mac}</td>
@@ -196,6 +196,7 @@
         padding: 8px;
         text-align: left;
         font-size: 12px;
+        width: fit-content;
     }
     tbody tr:hover {
         background-color: #e0e0e0;
