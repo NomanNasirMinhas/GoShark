@@ -330,7 +330,7 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 		}
 
 		if saveFiles {
-			saveFileFromPacket(packet)
+			handlePacketForSaving(packet)
 		}
 
 		packetStr, err := PacketToJSON(packet)

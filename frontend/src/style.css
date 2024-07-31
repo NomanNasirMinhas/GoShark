@@ -2,8 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+.calistoga-regular {
+    font-family: "Calistoga", serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Calistoga", serif;    
+  }
+
+  
 html {
-    background-color: black;
+    background-color: #0f0112;
+    background-image: linear-gradient(43deg, #1f0126 0%, #240522 46%, #1b0227 100%);
     text-align: center;
     color: white;
 }

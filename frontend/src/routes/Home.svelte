@@ -1,5 +1,5 @@
 <script>
-  import logo from "./../assets/images/logo.jpeg";
+  import logo from "./../assets/images/logo.png";
   import { Button } from "flowbite-svelte";
   import { userStore } from './../store/store';
   import { Label, Select } from "flowbite-svelte";
