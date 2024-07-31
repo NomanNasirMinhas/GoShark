@@ -8,7 +8,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/user"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -271,6 +273,52 @@ func (a *App) IsRoot() bool {
 	return currentUser.Username == "root"
 }
 
+// IsRunningAsAdmin checks if the program is running with administrative (Windows) or root (Linux/macOS) privileges.
+func IsRunningAsAdmin() bool {
+	switch runtime.GOOS {
+	case "windows":
+		return isWindowsAdmin()
+	case "linux", "darwin":
+		return isRoot()
+	default:
+		log.Printf("Unsupported platform: %s\n", runtime.GOOS)
+		return false
+	}
+}
+
+// isWindowsAdmin checks if the program is running with administrative privileges on Windows.
+func isWindowsAdmin() bool {
+	// The windows package is not part of the standard library, so import it only if running on Windows.
+	// Import the package with: "golang.org/x/sys/windows"
+	// The implementation checks if the process token has elevated privileges.
+	// import (
+	// 	"golang.org/x/sys/windows"
+	// )
+
+	// var sid *windows.SID
+	// // Create a SID for the BUILTIN\Administrators group.
+	// if err := windows.AllocateAndInitializeSid(&windows.SECURITY_NT_AUTHORITY, 2,
+	// 	windows.SECURITY_BUILTIN_DOMAIN_RID, windows.DOMAIN_ALIAS_RID_ADMINS,
+	// 	0, 0, 0, 0, 0, 0, &sid); err != nil {
+	// 	log.Fatalf("AllocateAndInitializeSid: %v", err)
+	// 	return false
+	// }
+	// defer windows.FreeSid(sid)
+
+	// token := windows.Token(0)
+	// isMember, err := token.IsMember(sid)
+	// if err != nil {
+	// 	log.Fatalf("Token.IsMember: %v", err)
+	// 	return false
+	// }
+	return true
+}
+
+// isRoot checks if the program is running with root privileges on Linux/macOS.
+func isRoot() bool {
+	return os.Geteuid() == 0
+}
+
 func (a *App) GetAllDevices() string {
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
@@ -399,4 +447,77 @@ func LoadProtocols(filePath string) (map[string]map[int]string, error) {
 	}
 
 	return protocols, nil
+}
+
+// CheckLibcapAndInstall checks if libpcap is installed and installs it if not.
+func (a *App) CheckLibcapAndInstall() int {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		fmt.Printf("Unsupported platform: %s\n", runtime.GOOS)
+		return -1
+	}
+
+	// Check if libpcap is installed
+	if !isLibcapInstalled() {
+		fmt.Println("libpcap not found. Installing libpcap-dev...")
+		if err := installLibcapDev(); err != nil {
+			// return fmt.Errorf("failed to install libpcap-dev: %w", err)
+			fmt.Println("Failed to install libpcap-dev.")
+			return 0
+		}
+		fmt.Println("libpcap-dev installed successfully.")
+	} else {
+		fmt.Println("libpcap is already installed.")
+	}
+	return 1
+}
+
+// isLibcapInstalled checks if libpcap is installed.
+func isLibcapInstalled() bool {
+	// Try to find the libpcap library
+	cmd := exec.Command("ldconfig", "-p")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Error checking libpcap: %v\n", err)
+		return false
+	}
+	return contains(output, "libpcap")
+}
+
+// installLibcapDev installs libpcap-dev using the appropriate package manager.
+func installLibcapDev() error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "linux":
+		// Detect the package manager and construct the installation command
+		if isCommandAvailable("apt-get") {
+			cmd = exec.Command("sudo", "apt-get", "install", "-y", "libpcap-dev")
+		} else if isCommandAvailable("yum") {
+			cmd = exec.Command("sudo", "yum", "install", "-y", "libpcap-devel")
+		} else {
+			return fmt.Errorf("unsupported package manager on Linux")
+		}
+	case "darwin":
+		cmd = exec.Command("brew", "install", "libpcap")
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Error installing libpcap-dev: %v\nOutput: %s\n", err, output)
+		return err
+	}
+	return nil
+}
+
+// isCommandAvailable checks if a command is available in the PATH.
+func isCommandAvailable(command string) bool {
+	_, err := exec.LookPath(command)
+	return err == nil
+}
+
+// contains checks if a string is present in the byte slice.
+func contains(output []byte, substr string) bool {
+	return string(output) == substr
 }

@@ -77,18 +77,18 @@
     <div>
       <div class="input-box" id="input">
         <div class="flex flex-row justify-items-start">
-          <h1 style="font-size:medium; font-weight: bolder; width:300px">
+          <h4 style="font-size:medium; width:300px">
             Select An Interface
-          </h1>
+          </h4>
           <div>
             <Select items={$interfaces} bind:value={capture_iface} />
           </div>
         </div>
 
         <div class="flex flex-row justify-items-start">
-          <h1 style="font-size:medium; font-weight: bolder; width:300px">
+          <h4 style="font-size:medium; width:300px">
             Promiscious Mode
-          </h1>
+          </h4>
           <div>
             <Select items={[
               { value: true, name: "Enable" },
@@ -98,9 +98,9 @@
         </div>
 
         <div class="flex flex-row justify-items-start">
-          <h1 style="font-size:medium; font-weight: bolder; width:300px">
+          <h4 style="font-size:medium; width:300px">
             Export Session to PCAP
-          </h1>
+          </h4>
           <div>
             <Select items={[
               { value: true, name: "Yes" },

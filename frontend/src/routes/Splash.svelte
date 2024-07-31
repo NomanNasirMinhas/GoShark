@@ -9,6 +9,7 @@
       StartCapture,
       GetAllDevices,
       StopCapture,
+      CheckLibcapAndInstall
     } from "../../wailsjs/go/main/App.js";
     import { onMount } from "svelte";
     import { writable } from "svelte/store";
@@ -17,25 +18,19 @@
     // writeable interface array
   
     let isAdmin;
-    
-  
-    const interfaces = writable([]);
-    // Create a new store with the given data.
-    let requests = [];
-  
-    // let resultText = "Please enter your name below 👇"
-    // let name
-  
-  
-  
+    let isLibcapInstalled;
+      
     onMount(async () => {
       try {
         isAdmin = await IsRoot();
-        // if (isAdmin){
-        //     setTimeout(() => {
-        //         navigate("/home");
-        //     }, 10000);
-        // }        
+        isLibcapInstalled = await CheckLibcapAndInstall();
+        console.log("isAdmin", isAdmin);
+        console.log("isLibcapInstalled", isLibcapInstalled);
+        if (isAdmin){
+            setTimeout(() => {
+                navigate("/home");
+            }, 3000);
+        }        
       } catch (err) {
         console.log("Error in onMount", err);
       }
@@ -50,9 +45,13 @@
         <!-- <p style="margin-top: -50px;" class="text-lg dark:text-white">GoShark</p> -->
         <!-- <div class="result" id="result">{resultText}</div> -->
         {#if !isAdmin}
-        <div class="result" id="result">
-            You are not an admin. Program will not work properly.
-        </div>
+        <h4 class="err-msg" id="result">
+            You are not an admin. Please run the program as an admin.
+        </h4>
+        {:else}
+        <h4 class="ok-msg" id="result">
+            Loading ......
+        </h4>
         {/if}
     </div>
 
@@ -74,10 +73,20 @@
   
     .header {
       text-align: center;
-      font-size: 6rem;
-      /* font-weight: bold; */
-      /* margin-top: 20px; */
-      /* font-family: 'Times New Roman', Times, serif; */
+      font-size: 6rem;      
     }
+
+    .err-msg {
+      text-align: center;
+      font-size: 1rem;
+      color: red;
+    }
+
+    .ok-msg {
+      text-align: center;
+      font-size: 1rem;
+      color: rgb(4, 131, 44);
+    }
+
   </style>
   
