@@ -4,11 +4,17 @@ go 1.21
 
 toolchain go1.21.5
 
-require github.com/wailsapp/wails/v2 v2.7.1
+require (
+	github.com/miekg/dns v1.1.61
+	github.com/wailsapp/wails/v2 v2.7.1
+)
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
+	golang.org/x/mod v0.18.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/tools v0.22.0 // indirect
 )
 
 require (
@@ -25,6 +31,7 @@ require (
 	github.com/leaanthony/gosod v1.0.3 // indirect
 	github.com/leaanthony/slicer v1.6.0 // indirect
 	github.com/leaanthony/u v1.1.0 // indirect
+	github.com/m-chrome/go-suricataparser v0.3.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect

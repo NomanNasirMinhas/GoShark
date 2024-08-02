@@ -9,7 +9,7 @@
     } from 'flowbite-svelte';
     import {
         InfoCircleSolid, ArrowRightOutline, SearchSolid,
-        PlaySolid, StopSolid
+        PlaySolid, StopSolid, BugSolid, ThumbsUpSolid
     } from 'flowbite-svelte-icons';
     import { Greet, StartCapture, StopCapture } from "../../wailsjs/go/main/App.js";
     import { onMount, onDestroy } from 'svelte';
@@ -103,7 +103,7 @@
 
     <!-- Navbar -->
     <Navbar>
-        <NavBrand href="/">
+        <NavBrand href="/home">
             <img src={logo} class="me-3 h-6 sm:h-9" alt="Flowbite Logo" />
             <span class="self-center whitespace-nowrap text-xl font-semibold dark:text-white">GoShark</span>
         </NavBrand>
@@ -139,12 +139,14 @@
             <thead>
                 <tr>
                     <th>No.</th>
+                    <th>Alert</th>
                     <th>Timestamp</th>
                     <th>Source</th>
                     <!-- <th>Source Addr</th> -->
                     <th>Destination</th>
                     <!-- <th>Destination Addr</th> -->
                     <th>Protocol</th>
+                    <th>Port Flow</th>
                     <th>Length</th>
                     <!-- <th>Details</th> -->
                 </tr>
@@ -166,14 +168,24 @@
                     }}
                     >
                         <td>{idx + 1}</td>
+                        <td>{#if item.alert}
+                            <BugSolid class="w-5 h-5 text-red-500 dark:text-red-400" />
+                        {:else}
+                            <ThumbsUpSolid class="w-5 h-5 text-green-500 dark:text-green-400" />
+                        {/if}</td>
                         <td>{item.timestamp}</td>
                         <td>{item.source_host || item.source_ip_4 || item.source_mac}</td>
                         <!-- <td>{item.source_ip_4 || item.source_mac}</td> -->
                         <td>{item.destination_host || item.destination_ip_4 || item.destination_mac}</td>
                         <!-- <td>{item.destination_ip_4 || item.destination_mac}</td> -->
                         <td>
-                            {item.protocol || item.l2_protocol}
+                            {item.protocol || item.l2_protocol || "Unknown"}
                         </td>
+
+                        <td>
+                            {item.src_port || 'N/A'} -> {item.dst_port || 'N/A'}
+                        </td>
+
                         <td>{item.length || 'N/A'}</td>
                         <!-- <td>
                             <Button color="dark" size="xs" on:click={() => {

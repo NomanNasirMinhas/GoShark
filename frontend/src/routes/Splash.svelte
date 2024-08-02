@@ -23,9 +23,9 @@
     onMount(async () => {
       try {
         isAdmin = await IsRoot();
-        isLibcapInstalled = await CheckLibcapAndInstall();
+        // isLibcapInstalled = await CheckLibcapAndInstall();
         console.log("isAdmin", isAdmin);
-        console.log("isLibcapInstalled", isLibcapInstalled);
+        // console.log("isLibcapInstalled", isLibcapInstalled);
         if (isAdmin){
             setTimeout(() => {
                 navigate("/home");

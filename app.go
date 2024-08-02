@@ -12,6 +12,7 @@ import (
 	"os/user"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,6 +21,9 @@ import (
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/pcapgo"
 	"github.com/gorilla/websocket"
+	"github.com/miekg/dns"
+
+	"github.com/m-chrome/go-suricataparser"
 
 	"encoding/json"
 )
@@ -36,6 +40,8 @@ var upgrader = websocket.Upgrader{
 	// Allow all origins (in production, it's better to set this explicitly)
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
+
+var suricataRules []*suricataparser.Rule
 
 // Slice to store connected WebSocket clients
 var clients []*websocket.Conn
@@ -156,6 +162,8 @@ type PacketInfo struct {
 	Color           string           `json:"color,omitempty"`
 	SourceHost      string           `json:"source_host,omitempty"`
 	DestinationHost string           `json:"destination_host,omitempty"`
+	SuricataAlert   []string         `json:"suricata_alert,omitempty"`
+	YaraAlert       []string         `json:"yara_alert,omitempty"`
 }
 
 // PacketToJSON converts a gopacket.Packet to a JSON string
@@ -183,17 +191,19 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 			packetInfo.DestinationIP4 = ipPacket.DstIP.String()
 			src_list, err := net.LookupAddr(packetInfo.SourceIP4)
 			if err == nil {
-				for _, hostname := range src_list {
-					packetInfo.SourceHost = hostname
-					break
-				}
+				packetInfo.SourceHost = strings.Join(src_list, ", ")
+				// for _, hostname := range src_list {
+				// 	packetInfo.SourceHost = hostname
+				// 	break
+				// }
 			}
 			dst_src, err := net.LookupAddr(packetInfo.DestinationIP4)
 			if err == nil {
-				for _, hostname := range dst_src {
-					packetInfo.DestinationHost = hostname
-					break
-				}
+				packetInfo.DestinationHost = strings.Join(dst_src, ", ")
+				// for _, hostname := range dst_src {
+				// 	packetInfo.DestinationHost = hostname
+				// 	break
+				// }
 			}
 			packetInfo.L2Protocol = l2Protocols[uint8(ipPacket.Protocol)]
 		}
@@ -254,6 +264,10 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 	// Include any error occurred during decoding
 	if err_layer := packet.ErrorLayer(); err_layer != nil {
 		packetInfo.DecodeError = err_layer.Error()
+	}
+
+	if len(suricataRules) > 0 {
+		packetInfo = checkforSuricataAlert(packet, packetInfo)
 	}
 
 	// Convert to JSON
@@ -402,6 +416,99 @@ func (a *App) StopCapture() {
 	println("Packet Capture Stopped")
 }
 
+func (a *App) ParseSuricataRules(filepath string) bool {
+	rules, err := suricataparser.ParseFile(filepath)
+	if err != nil {
+		fmt.Println("Error parsing rules file:", err)
+		return false
+	} else {
+		suricataRules = rules
+		return true
+	}
+}
+
+func checkforSuricataAlert(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
+	for _, rule := range suricataRules {
+		if (rule.Action() == "alert" || rule.Action() == "drop") && rule.Enabled {
+			header := rule.Header()
+			header_split := strings.Split(header, "->")
+			header_src := header_split[0]
+			header_dst := header_split[1]
+
+			// Extract the protocol, source IP, source port, destination IP, and destination port
+			protocol, srcIP, srcPort, dstIP, dstPort := parseHeader(header_src, header_dst)
+
+			// Check the protocol
+			if checkProtocol(packet, protocol) {
+				// Check source and destination IP and ports
+				if checkIPandPort(packet, srcIP, srcPort, dstIP, dstPort) {
+					fmt.Printf("Packet matches rule: %s\n", rule.Msg())
+					packInfo.SuricataAlert = append(packInfo.SuricataAlert, rule.Msg())
+				}
+			}
+		}
+	}
+	return packInfo
+}
+
+// Helper function to parse the header fields
+func parseHeader(header_src, header_dst string) (string, string, string, string, string) {
+	// Assuming header_src and header_dst are in the format: protocol srcIP srcPort dstIP dstPort
+	header_src_parts := strings.Fields(header_src)
+	header_dst_parts := strings.Fields(header_dst)
+
+	protocol := header_src_parts[0]
+	srcIP := header_src_parts[1]
+	srcPort := header_src_parts[2]
+	dstIP := header_dst_parts[0]
+	dstPort := header_dst_parts[1]
+
+	return protocol, srcIP, srcPort, dstIP, dstPort
+}
+
+// Helper function to check the protocol
+func checkProtocol(packet gopacket.Packet, protocol string) bool {
+	switch protocol {
+	case "tcp":
+		return packet.TransportLayer().LayerType() == layers.LayerTypeTCP
+	case "udp":
+		return packet.TransportLayer().LayerType() == layers.LayerTypeUDP
+	default:
+		return false
+	}
+}
+
+// Helper function to check source and destination IP and ports
+func checkIPandPort(packet gopacket.Packet, srcIP, srcPort, dstIP, dstPort string) bool {
+	networkLayer := packet.NetworkLayer()
+	if networkLayer == nil {
+		return false
+	}
+
+	// Check IP addresses
+	if srcIP != "any" && networkLayer.NetworkFlow().Src().String() != srcIP {
+		return false
+	}
+	if dstIP != "any" && networkLayer.NetworkFlow().Dst().String() != dstIP {
+		return false
+	}
+
+	transportLayer := packet.TransportLayer()
+	if transportLayer == nil {
+		return false
+	}
+
+	// Check ports
+	if srcPort != "any" && transportLayer.TransportFlow().Src().String() != srcPort {
+		return false
+	}
+	if dstPort != "any" && transportLayer.TransportFlow().Dst().String() != dstPort {
+		return false
+	}
+
+	return true
+}
+
 func (a *App) GetPacketStream() []gopacket.Packet {
 	return capturePackets
 }
@@ -520,4 +627,38 @@ func isCommandAvailable(command string) bool {
 // contains checks if a string is present in the byte slice.
 func contains(output []byte, substr string) bool {
 	return string(output) == substr
+}
+
+// QueryDNS queries the specified DNS server for the PTR record of the given IP address and returns the URL.
+func QueryDNS(dnsServer, ipAddress string) (string, error) {
+	// Reverse the IP address for PTR query
+	ipParts := strings.Split(ipAddress, ".")
+	for i, j := 0, len(ipParts)-1; i < j; i, j = i+1, j-1 {
+		ipParts[i], ipParts[j] = ipParts[j], ipParts[i]
+	}
+	reversedIP := strings.Join(ipParts, ".") + ".in-addr.arpa."
+
+	// Create a DNS message for the PTR query
+	msg := new(dns.Msg)
+	msg.SetQuestion(reversedIP, dns.TypePTR)
+	msg.RecursionDesired = true
+
+	// Set the DNS server and port
+	client := new(dns.Client)
+	server := dnsServer + ":53"
+
+	// Send the DNS query
+	resp, _, err := client.Exchange(msg, server)
+	if err != nil {
+		return "", fmt.Errorf("failed to query DNS server: %v", err)
+	}
+
+	// Check the response for PTR records
+	for _, answer := range resp.Answer {
+		if ptr, ok := answer.(*dns.PTR); ok {
+			return ptr.Ptr, nil
+		}
+	}
+
+	return "", fmt.Errorf("no PTR record found for IP address: %s", ipAddress)
 }
