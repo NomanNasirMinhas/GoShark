@@ -11,13 +11,17 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/golang/protobuf v1.5.0 // indirect
+	github.com/hillu/go-yara v1.3.1 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
+	google.golang.org/protobuf v1.27.1 // indirect
 )
 
 require (
+	github.com/VirusTotal/gyp v0.9.0
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect

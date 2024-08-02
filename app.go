@@ -23,6 +23,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/miekg/dns"
 
+	"github.com/VirusTotal/gyp"
+	"github.com/VirusTotal/gyp/ast"
 	"github.com/m-chrome/go-suricataparser"
 
 	"encoding/json"
@@ -49,6 +51,7 @@ var handles []*pcap.Handle
 var capturePackets []gopacket.Packet
 var mu sync.Mutex
 var protocols_list map[string]map[int]string
+var yaraRules []*ast.Rule
 
 // Handler function for WebSocket connection
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -270,6 +273,10 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 		packetInfo = checkforSuricataAlert(packet, packetInfo)
 	}
 
+	if len(yaraRules) > 0 {
+		packetInfo = checkForYaraMatch(packet, packetInfo)
+	}
+
 	// Convert to JSON
 	jsonData, err := json.Marshal(packetInfo)
 	if err != nil {
@@ -425,6 +432,60 @@ func (a *App) ParseSuricataRules(filepath string) bool {
 		suricataRules = rules
 		return true
 	}
+}
+
+func (a *App) LoadYaraRules(ruleFile string) bool {
+	// Open the YARA rules file
+	file, err := os.Open(ruleFile)
+	if err != nil {
+		fmt.Errorf("failed to open YARA rules file: %w", err)
+		return false
+	}
+	defer file.Close()
+
+	// Parse the YARA rules using the io.Reader
+	rules, err := gyp.Parse(file)
+	if err != nil {
+		yaraRules = rules.Rules
+		fmt.Errorf("failed to parse YARA rules: %w", err)
+		return len(yaraRules) > 0
+	}
+
+	return false
+}
+
+func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
+	p := packet.Dump()
+	// check if packet string or hex match yara rules
+	for _, rule := range yaraRules {
+		for _, str := range rule.Strings {
+			if containsstr(p, str.String()) {
+				packInfo.YaraAlert = append(packInfo.YaraAlert, rule.Identifier+" Matched")
+			}
+		}
+	}
+
+	return packInfo
+
+}
+
+// removeSpacesAndNewlines removes all spaces and newlines from a string
+func removeSpacesAndNewlines(s string) string {
+	// Remove spaces and newlines
+	s = strings.ReplaceAll(s, " ", "")
+	s = strings.ReplaceAll(s, "\n", "")
+	s = strings.ReplaceAll(s, "\r", "") // For carriage returns
+	return s
+}
+
+// contains checks if the first string contains the second string after removing spaces and newlines
+func containsstr(str1, str2 string) bool {
+	// Remove spaces and newlines
+	str1 = removeSpacesAndNewlines(str1)
+	str2 = removeSpacesAndNewlines(str2)
+
+	// Check if str1 contains str2
+	return strings.Contains(str1, str2)
 }
 
 func checkforSuricataAlert(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
