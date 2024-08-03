@@ -49,13 +49,9 @@
 
         ws.addEventListener('message', event => {
             const pcapData = JSON.parse(event.data);
-            console.log('Received message from server:', pcapData);
-            if(!pcapData.alert_type){
+            console.log('Received message from server:', pcapData);            
                 requests.update(old => [...old, pcapData]);
-                if (scroll_to_bottom) scrollToEnd();
-            } else{
-                alerts.update(old => [...old, pcapData]);
-            }
+                if (scroll_to_bottom) scrollToEnd();            
         });
 
         ws.addEventListener('error', err => console.log('WebSocket error:', err));
@@ -173,7 +169,7 @@
                     }}
                     >
                         <td>{idx + 1}</td>
-                        <td>{#if item.alert}
+                        <td>{#if item.alert_type}
                             <BugSolid class="w-5 h-5 text-red-500 dark:text-red-400" />
                         {:else}
                             <ThumbsUpSolid class="w-5 h-5 text-green-500 dark:text-green-400" />
