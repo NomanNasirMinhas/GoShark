@@ -9,7 +9,7 @@
     } from 'flowbite-svelte';
     import {
         InfoCircleSolid, ArrowRightOutline, SearchSolid,
-        PlaySolid, StopSolid, BugSolid, ThumbsUpSolid
+        PlaySolid, StopSolid, CheckCircleSolid, ExclamationCircleSolid,
     } from 'flowbite-svelte-icons';
     import { Greet, StartCapture, StopCapture } from "../../wailsjs/go/main/App.js";
     import { onMount, onDestroy } from 'svelte';
@@ -103,11 +103,16 @@
     </Drawer>
 
     <!-- Navbar -->
-    <Navbar>
-        <NavBrand href="/home">
+    <Navbar class="flex flex-row justify-start fixed top-0 left-0 right-0 z-10">
+        <NavBrand href="/">
             <img src={logo} class="me-3 h-6 sm:h-9" alt="Flowbite Logo" />
             <span class="self-center whitespace-nowrap text-xl font-semibold dark:text-white">GoShark</span>
         </NavBrand>
+        <div class="w-64 ">
+            <Input type="text" placeholder="Enter a filter" bind:value={searchTerm}>
+                <SearchSolid slot="right" class="w-5 h-5 text-blue-500 dark:text-gray-400" />
+            </Input>
+        </div>
         <div class="flex md:order-2">
             <Checkbox class="mr-16" checked={scroll_to_bottom} on:click={()=> scroll_to_bottom = !scroll_to_bottom}>Scroll To End</Checkbox>
             <Button size="sm" color={capture_started ? 'red' : 'green'} on:click={toggleCapture}>
@@ -117,25 +122,15 @@
                     <PlaySolid class="w-5 h-5 me-2" /> Start Capturing
                 {/if}
             </Button>
-
+            <p>Packets: {$requests.length}</p>
             <NavHamburger />
         </div>
     </Navbar>
 
     
     <!-- Packets Table -->
-    <div class="packets_div" id="packets_div">
-        <!-- Search and Packet Count -->
-        <div class="flex flex-row justify-between mb-6">
-            <div class="w-1/2">
-                <Input type="text" placeholder="Enter a filter" bind:value={searchTerm}>
-                    <SearchSolid slot="right" class="w-5 h-5 text-blue-500 dark:text-gray-400" />
-                </Input>
-            </div>
-            <!-- <div class="w-96"> -->
-                <p>Packets: {$requests.length}</p>
-            <!-- </div> -->
-        </div>
+    <div class="packets_div fixed top-36 left-0 right-0 z-10" id="packets_div">
+                
         <table>
             <thead>
                 <tr>
@@ -170,9 +165,9 @@
                     >
                         <td>{idx + 1}</td>
                         <td>{#if item.alert_type}
-                            <BugSolid class="w-5 h-5 text-red-500 dark:text-red-400" />
+                            <ExclamationCircleSolid class="w-5 h-5 text-red-500 dark:text-red-400" />
                         {:else}
-                            <ThumbsUpSolid class="w-5 h-5 text-green-500 dark:text-green-400" />
+                            <CheckCircleSolid class="w-5 h-5 text-green-500 dark:text-green-400" />
                         {/if}</td>
                         <td>{item.timestamp}</td>
                         <td>{item.source_host || item.source_ip_4 || item.source_mac}</td>
