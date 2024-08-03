@@ -12,7 +12,7 @@ export function Greet(arg1:string):Promise<string>;
 
 export function IsRoot():Promise<boolean>;
 
-export function LoadYaraRules(arg1:string):Promise<boolean>;
+export function LoadYaraRules(arg1:string,arg2:Array<number>):Promise<boolean>;
 
 export function ParseSuricataRules(arg1:string,arg2:Array<number>):Promise<boolean>;
 

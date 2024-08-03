@@ -22,8 +22,8 @@ export function IsRoot() {
   return window['go']['main']['App']['IsRoot']();
 }
 
-export function LoadYaraRules(arg1) {
-  return window['go']['main']['App']['LoadYaraRules'](arg1);
+export function LoadYaraRules(arg1, arg2) {
+  return window['go']['main']['App']['LoadYaraRules'](arg1, arg2);
 }
 
 export function ParseSuricataRules(arg1, arg2) {

@@ -96,11 +96,43 @@
       console.log('File bytes 2 :', fileBytes);
       
       let parsed = await ParseSuricataRules(file.name, fileBytes)
+      fileBytes = []
       console.log("Suricata Parsed", parsed)
       if(!parsed){
         suricataParsed = -1;
       } else{
         suricataParsed = 1;
+      }
+    } catch (e){      
+      console.log("Ex:", e)      
+    }
+    }
+  };
+
+  const handleYaraSelection = async (event) => {
+    
+    const files = event.target.files;
+    if (files.length > 0) {
+      try{
+      const file = files[0];
+      // @ts-ignore
+      readFileAsBytes(file)
+      await sleep(100)
+      
+      if(!fileBytes){
+        yaraParsed = -1
+        return
+      }
+      fileBytes = Array.from(fileBytes)
+      console.log('File bytes 2 :', fileBytes);
+      
+      let parsed = await LoadYaraRules(file.name, fileBytes)
+      fileBytes = []
+      console.log("Suricata Parsed", parsed)
+      if(!parsed){
+        yaraParsed = -1;
+      } else{
+        yaraParsed = 1;
       }
     } catch (e){      
       console.log("Ex:", e)      
@@ -197,7 +229,7 @@
           <h4 style="font-size:medium; width:300px">
             YARA Rules Files
           </h4>
-          <Fileupload class="w-96" {...yarafileprops} />
+          <Fileupload class="w-96" {...yarafileprops} on:change={handleYaraSelection} />
         </div>
         
       </div>

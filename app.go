@@ -47,6 +47,7 @@ var upgrader = websocket.Upgrader{
 var suricataRules []*suricataparser.Rule
 
 const suricataRulesDir = "suricataRules"
+const yaraRulesDir = "yaraRules"
 
 // Slice to store connected WebSocket clients
 var clients []*websocket.Conn
@@ -411,6 +412,10 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 			packStruct = checkforSuricataAlert(packStruct)
 		}
 
+		if len(yaraRules) > 0 {
+			packStruct = checkForYaraMatch(packet, packStruct)
+		}
+
 		// Convert to JSON
 		jsonData, err := json.Marshal(packStruct)
 		if err == nil {
@@ -441,6 +446,17 @@ func (a *App) StopCapture() {
 func createSuricataRulesDir() {
 	if _, err := os.Stat(suricataRulesDir); os.IsNotExist(err) {
 		err := os.Mkdir(suricataRulesDir, os.ModePerm)
+		if err != nil {
+			fmt.Printf("Error creating directory: %s\n", err)
+			os.Exit(1)
+		}
+	}
+}
+
+// Create the suricataRules folder if it does not exist
+func createYaraRulesDir() {
+	if _, err := os.Stat(yaraRulesDir); os.IsNotExist(err) {
+		err := os.Mkdir(yaraRulesDir, os.ModePerm)
 		if err != nil {
 			fmt.Printf("Error creating directory: %s\n", err)
 			os.Exit(1)
@@ -491,9 +507,33 @@ func (a *App) ParseSuricataRules(filename string, data []byte) bool {
 	}
 }
 
-func (a *App) LoadYaraRules(ruleFile string) bool {
-	// Open the YARA rules file
-	file, err := os.Open(ruleFile)
+func (a *App) LoadYaraRules(filename string, data []byte) bool {
+	println("File Name", filename)
+	println("File Data", data)
+	// Create or ensure suricataRules directory
+	createYaraRulesDir()
+
+	println("Dir created.")
+	// Save the file
+	if _, err := os.Stat(yaraRulesDir); os.IsNotExist(err) {
+		err := os.Mkdir(yaraRulesDir, os.ModePerm)
+		if err != nil {
+			fmt.Errorf("error creating directory: %s", err)
+			return false
+		}
+	}
+	println("File Saved.")
+
+	// Save the file
+	filePath := filepath.Join(yaraRulesDir, filename)
+	err := os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		fmt.Errorf("error saving file: %s", err)
+		return false
+	}
+	println("Data Copied: ", filePath)
+
+	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Errorf("failed to open YARA rules file: %w", err)
 		return false
@@ -502,13 +542,29 @@ func (a *App) LoadYaraRules(ruleFile string) bool {
 
 	// Parse the YARA rules using the io.Reader
 	rules, err := gyp.Parse(file)
-	if err != nil {
+	if err == nil {
 		yaraRules = rules.Rules
-		fmt.Errorf("failed to parse YARA rules: %w", err)
+		println("Yara Rules Len: ", len(yaraRules))
 		return len(yaraRules) > 0
+	} else {
+		fmt.Errorf("failed to parse YARA rules: %w", err)
+		return false
 	}
 
 	return false
+}
+
+func removeChars(input string) string {
+	// Create a replacer to remove the specified characters
+	replacer := strings.NewReplacer(
+		"\"", "",
+		"{", "",
+		"}", "",
+		" ", "",
+	)
+	// Replace the characters in the input string
+	result := replacer.Replace(input)
+	return result
 }
 
 func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
@@ -516,8 +572,15 @@ func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
 	// check if packet string or hex match yara rules
 	for _, rule := range yaraRules {
 		for _, str := range rule.Strings {
-			if containsstr(p, str.String()) {
+			s := strings.Split(str.String(), "=")[1]
+			s = removeChars(s)
+
+			// println("Checking for yara string: ", s)
+			if containsstr(p, s) {
+				println("Packet contains ", p)
 				packInfo.YaraAlert = append(packInfo.YaraAlert, rule.Identifier+" Matched")
+				packInfo.AlertType = 1
+				packInfo.AlertMessage = "Yara Rule with ID: " + rule.Identifier + " Matched"
 			}
 		}
 	}
