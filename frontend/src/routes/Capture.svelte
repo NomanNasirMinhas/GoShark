@@ -21,6 +21,7 @@
     const ac_transitionParamsBottom = { y: 320, duration: 200, easing: sineIn };
 
     const requests = writable([]);
+    const alerts = writable([]);
     let scroll_to_bottom = true;
     let ac_hidden8 = true;
     let ac_current_packet = null;
@@ -48,9 +49,13 @@
 
         ws.addEventListener('message', event => {
             const pcapData = JSON.parse(event.data);
-            // console.log('Received message from server:', pcapData);
-            requests.update(old => [...old, pcapData]);
-            if (scroll_to_bottom) scrollToEnd();
+            console.log('Received message from server:', pcapData);
+            if(!pcapData.alert_type){
+                requests.update(old => [...old, pcapData]);
+                if (scroll_to_bottom) scrollToEnd();
+            } else{
+                alerts.update(old => [...old, pcapData]);
+            }
         });
 
         ws.addEventListener('error', err => console.log('WebSocket error:', err));

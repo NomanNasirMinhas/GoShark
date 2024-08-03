@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -44,6 +45,8 @@ var upgrader = websocket.Upgrader{
 }
 
 var suricataRules []*suricataparser.Rule
+
+const suricataRulesDir = "suricataRules"
 
 // Slice to store connected WebSocket clients
 var clients []*websocket.Conn
@@ -135,6 +138,12 @@ type PacketInfoArr struct {
 	Packets []PacketInfo `json:"packets,omitempty"`
 }
 
+type AlertMessage struct {
+	Timestamp    time.Time `json:"timestamp,omitempty"`
+	AlertType    int       `json:"alert_type,omitempty"`
+	AlertMessage string    `json:"alert_msg,omitempty"`
+}
+
 // PacketInfo holds the decoded information from the packet
 type PacketInfo struct {
 	Timestamp       time.Time        `json:"timestamp,omitempty"`
@@ -170,7 +179,7 @@ type PacketInfo struct {
 }
 
 // PacketToJSON converts a gopacket.Packet to a JSON string
-func PacketToJSON(packet gopacket.Packet) (string, error) {
+func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 	var packetInfo PacketInfo
 
 	packetInfo.Timestamp = packet.Metadata().Timestamp
@@ -269,21 +278,13 @@ func PacketToJSON(packet gopacket.Packet) (string, error) {
 		packetInfo.DecodeError = err_layer.Error()
 	}
 
-	if len(suricataRules) > 0 {
-		packetInfo = checkforSuricataAlert(packet, packetInfo)
-	}
-
-	if len(yaraRules) > 0 {
-		packetInfo = checkForYaraMatch(packet, packetInfo)
-	}
-
 	// Convert to JSON
 	jsonData, err := json.Marshal(packetInfo)
 	if err != nil {
-		return "", err
+		return "", packetInfo, err
 	}
 
-	return string(jsonData), nil
+	return string(jsonData), packetInfo, nil
 }
 
 func (a *App) IsRoot() bool {
@@ -402,9 +403,19 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 			handlePacketForSaving(packet)
 		}
 
-		packetStr, err := PacketToJSON(packet)
+		packetStr, packStruct, err := PacketToJSON(packet)
+
+		// if len(yaraRules) > 0 {
+		// 	checkForYaraMatch(packet, packetInfo)
+		// }
+
 		if err == nil {
 			broadcastMessage(packetStr)
+			if len(suricataRules) > 0 {
+				go func() {
+					checkforSuricataAlert(packStruct)
+				}()
+			}
 		} else {
 			println("Error Parsing Packet", err)
 		}
@@ -423,13 +434,56 @@ func (a *App) StopCapture() {
 	println("Packet Capture Stopped")
 }
 
-func (a *App) ParseSuricataRules(filepath string) bool {
-	rules, err := suricataparser.ParseFile(filepath)
+// Create the suricataRules folder if it does not exist
+func createSuricataRulesDir() {
+	if _, err := os.Stat(suricataRulesDir); os.IsNotExist(err) {
+		err := os.Mkdir(suricataRulesDir, os.ModePerm)
+		if err != nil {
+			fmt.Printf("Error creating directory: %s\n", err)
+			os.Exit(1)
+		}
+	}
+}
+
+func (a *App) ParseSuricataRules(filename string, data []byte) bool {
+	println("File Name", filename)
+	println("File Data", data)
+	// Create or ensure suricataRules directory
+	createSuricataRulesDir()
+
+	println("Dir created.")
+	// Save the file
+	if _, err := os.Stat(suricataRulesDir); os.IsNotExist(err) {
+		err := os.Mkdir(suricataRulesDir, os.ModePerm)
+		if err != nil {
+			fmt.Errorf("error creating directory: %s", err)
+			return false
+		}
+	}
+	println("File Saved.")
+
+	// Save the file
+	filePath := filepath.Join(suricataRulesDir, filename)
+	err := os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		fmt.Errorf("error saving file: %s", err)
+		return false
+	}
+	println("Data Copied: ", filePath)
+	// w.Write([]byte("File uploaded successfully"))
+
+	rules, err := suricataparser.ParseFile(filePath)
 	if err != nil {
 		fmt.Println("Error parsing rules file:", err)
 		return false
 	} else {
+		println("Rules Len: ", len(rules))
+		if len(rules) == 0 {
+			fmt.Println("Error parsing rules file:", err)
+			return false
+		}
 		suricataRules = rules
+		fmt.Printf("Rule 0: %s", rules[0])
 		return true
 	}
 }
@@ -488,9 +542,10 @@ func containsstr(str1, str2 string) bool {
 	return strings.Contains(str1, str2)
 }
 
-func checkforSuricataAlert(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
+func checkforSuricataAlert(packInfo PacketInfo) {
 	for _, rule := range suricataRules {
 		if (rule.Action() == "alert" || rule.Action() == "drop") && rule.Enabled {
+			// fmt.Printf("Rule -> %s, %s, %s\n\n", rule.Action(), rule.Header(), rule.Enabled)
 			header := rule.Header()
 			header_split := strings.Split(header, "->")
 			header_src := header_split[0]
@@ -498,18 +553,26 @@ func checkforSuricataAlert(packet gopacket.Packet, packInfo PacketInfo) PacketIn
 
 			// Extract the protocol, source IP, source port, destination IP, and destination port
 			protocol, srcIP, srcPort, dstIP, dstPort := parseHeader(header_src, header_dst)
-
+			fmt.Printf("Rules -> %s, %s, %s, %s, %s\n\n", protocol, srcIP, srcPort, dstIP, dstPort)
 			// Check the protocol
-			if checkProtocol(packet, protocol) {
+			if checkProtocol(packInfo, protocol) {
+				println("Protocols matched")
 				// Check source and destination IP and ports
-				if checkIPandPort(packet, srcIP, srcPort, dstIP, dstPort) {
+				if checkIPandPort(packInfo, srcIP, srcPort, dstIP, dstPort) {
 					fmt.Printf("Packet matches rule: %s\n", rule.Msg())
-					packInfo.SuricataAlert = append(packInfo.SuricataAlert, rule.Msg())
+					var alert AlertMessage
+					alert.AlertMessage = rule.Msg()
+					alert.Timestamp = packInfo.Timestamp
+					alert.AlertType = 1
+
+					jsonData, err := json.Marshal(alert)
+					if err == nil {
+						broadcastMessage(string(jsonData))
+					}
 				}
 			}
 		}
 	}
-	return packInfo
 }
 
 // Helper function to parse the header fields
@@ -528,42 +591,36 @@ func parseHeader(header_src, header_dst string) (string, string, string, string,
 }
 
 // Helper function to check the protocol
-func checkProtocol(packet gopacket.Packet, protocol string) bool {
-	switch protocol {
-	case "tcp":
-		return packet.TransportLayer().LayerType() == layers.LayerTypeTCP
-	case "udp":
-		return packet.TransportLayer().LayerType() == layers.LayerTypeUDP
-	default:
-		return false
-	}
+func checkProtocol(packet PacketInfo, protocol string) bool {
+
+	p := packet.AppProtocol
+	p = strings.ToLower(p)
+	println("Packet Protocol", p)
+	return p == strings.ToLower(protocol)
 }
 
 // Helper function to check source and destination IP and ports
-func checkIPandPort(packet gopacket.Packet, srcIP, srcPort, dstIP, dstPort string) bool {
-	networkLayer := packet.NetworkLayer()
-	if networkLayer == nil {
-		return false
-	}
+func checkIPandPort(packet PacketInfo, srcIP, srcPort, dstIP, dstPort string) bool {
+
+	fmt.Printf("%s", packet)
+
+	// if packet.SourceIP4 == nil || packet.DestinationIP4 == nil || packet.SrcPort == nil || packet.DstPort == nil {
+	// 	return false
+	// }
 
 	// Check IP addresses
-	if srcIP != "any" && networkLayer.NetworkFlow().Src().String() != srcIP {
+	if srcIP != "any" && packet.SourceIP4 != srcIP {
 		return false
 	}
-	if dstIP != "any" && networkLayer.NetworkFlow().Dst().String() != dstIP {
-		return false
-	}
-
-	transportLayer := packet.TransportLayer()
-	if transportLayer == nil {
+	if dstIP != "any" && packet.DestinationIP4 != dstIP {
 		return false
 	}
 
 	// Check ports
-	if srcPort != "any" && transportLayer.TransportFlow().Src().String() != srcPort {
+	if srcPort != "any" && packet.SrcPort != srcPort {
 		return false
 	}
-	if dstPort != "any" && transportLayer.TransportFlow().Dst().String() != dstPort {
+	if dstPort != "any" && packet.DstPort != dstPort {
 		return false
 	}
 

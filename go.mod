@@ -12,7 +12,6 @@ require (
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
-	github.com/hillu/go-yara v1.3.1 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect

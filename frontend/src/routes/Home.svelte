@@ -1,17 +1,28 @@
 <script>
+  // @ts-ignore
   import logo from "./../assets/images/logo.png";
   import { Button } from "flowbite-svelte";
   import { userStore } from './../store/store';
-  import { Label, Select } from "flowbite-svelte";
+  // @ts-ignore
+  import { Label, Select, Fileupload, Toast } from "flowbite-svelte";
+  // @ts-ignore
+  import { CheckCircleSolid, ExclamationCircleSolid, FireOutline, CloseCircleSolid } from 'flowbite-svelte-icons';
   import {
+    // @ts-ignore
     Greet,
     IsRoot,
+    // @ts-ignore
     StartCapture,
     GetAllDevices,
+    // @ts-ignore
     StopCapture,
+    ParseSuricataRules,
+    // @ts-ignore
+    LoadYaraRules
   } from "../../wailsjs/go/main/App.js";
   import { onMount } from "svelte";
   import { writable } from "svelte/store";
+  // @ts-ignore
   import { get } from "svelte/store";
   import { navigate } from "svelte-routing";
   // writeable interface array
@@ -20,17 +31,82 @@
   let capture_started = false;
 
   let capture_export = false;
+  // @ts-ignore
   let capture_filter = "";
   let capture_iface = "";
   let capture_promisc = false;
 
+  let suricataParsed = 0;
+  let yaraParsed = 0;
+
   const interfaces = writable([]);
   // Create a new store with the given data.
+  // @ts-ignore
   let requests = [];
 
   // let resultText = "Please enter your name below 👇"
   // let name
 
+  let suricatafileprops = {
+    id: 'user_avatar'
+  };
+
+  let yarafileprops = {
+    id: 'user_avatar2'
+  };
+
+  let fileBytes = null;
+
+  // @ts-ignore
+  function readFileAsBytes(file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      // @ts-ignore
+      fileBytes = new Uint8Array(event.target.result);
+      console.log('File bytes:', fileBytes);
+    };
+    
+    reader.onerror = (event) => {
+      console.error('Error reading file:', event);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+  const handleSuricataSelection = async (event) => {
+    
+    const files = event.target.files;
+    if (files.length > 0) {
+      try{
+      const file = files[0];
+      // @ts-ignore
+      readFileAsBytes(file)
+      await sleep(100)
+      
+      if(!fileBytes){
+        suricataParsed = -1
+        return
+      }
+      fileBytes = Array.from(fileBytes)
+      console.log('File bytes 2 :', fileBytes);
+      
+      let parsed = await ParseSuricataRules(file.name, fileBytes)
+      console.log("Suricata Parsed", parsed)
+      if(!parsed){
+        suricataParsed = -1;
+      } else{
+        suricataParsed = 1;
+      }
+    } catch (e){      
+      console.log("Ex:", e)      
+    }
+    }
+  };
 
 
   onMount(async () => {
@@ -64,16 +140,17 @@
   });
 </script>
 
-<main>
-  <img alt="Wails logo" id="logo" src={logo} />
-  <!-- <p style="margin-top: -50px;" class="text-lg dark:text-white">GoShark</p> -->
-  <!-- <div class="result" id="result">{resultText}</div> -->
-  {#if !isAdmin}
+<main>    
+    
+    <img alt="Wails logo" id="logo" src={logo} />
+    <!-- <p style="margin-top: -50px;" class="text-lg dark:text-white">GoShark</p> -->
+    <!-- <div class="result" id="result">{resultText}</div> -->
+    {#if !isAdmin}
     <div class="result" id="result">
       You are not an admin. Program will not work properly.
     </div>
-  {/if}
-  {#if $interfaces.length > 0}
+    {/if}
+    {#if $interfaces.length > 0}
     <div>
       <div class="input-box" id="input">
         <div class="flex flex-row justify-items-start">
@@ -84,7 +161,7 @@
             <Select items={$interfaces} bind:value={capture_iface} />
           </div>
         </div>
-
+        
         <div class="flex flex-row justify-items-start">
           <h4 style="font-size:medium; width:300px">
             Promiscious Mode
@@ -96,7 +173,7 @@
             ]} bind:value={capture_promisc} />
           </div>
         </div>
-
+        
         <div class="flex flex-row justify-items-start">
           <h4 style="font-size:medium; width:300px">
             Export Session to PCAP
@@ -108,20 +185,77 @@
             ]} bind:value={capture_export} />
           </div>
         </div>
-
+        
+        <div class="flex flex-row justify-items-start">
+          <h4 style="font-size:medium; width:300px">
+            Suricata Rules File
+          </h4>
+          <Fileupload class="w-96" {...suricatafileprops} on:change={handleSuricataSelection} />
+        </div>
+        
+        <div class="flex flex-row justify-items-start">
+          <h4 style="font-size:medium; width:300px">
+            YARA Rules Files
+          </h4>
+          <Fileupload class="w-96" {...yarafileprops} />
+        </div>
+        
       </div>
       <Button
-        color={capture_started ? "red" : "green"}
-        disabled={!isAdmin || capture_iface == "" || capture_promisc == null}
-        on:click={()=>{
-          userStore.update((old) => ({...old, capture_iface: capture_iface, capture_promisc: capture_promisc, filter: '', capture_export: capture_export}));
-          navigate("/capture")
-        }}
+      color={capture_started ? "red" : "green"}
+      disabled={!isAdmin || capture_iface == "" || capture_promisc == null}
+      on:click={()=>{
+        userStore.update((old) => ({...old, capture_iface: capture_iface, capture_promisc: capture_promisc, filter: '', capture_export: capture_export}));
+        navigate("/capture")
+      }}
       >
-        {!capture_started ? "Capture" : "Stop"}
-      </Button>
-    </div>
+      {!capture_started ? "Capture" : "Stop"}
+    </Button>
+  </div>
   {/if}
+
+<p class="h-16"></p>
+
+{#if suricataParsed === -1}
+  <Toast color="red" class = "z-10 m-auto">
+    <svelte:fragment slot="icon">
+      <ExclamationCircleSolid class="w-5 h-5" />
+      <span class="sr-only">Warning icon</span>
+    </svelte:fragment>
+    Unable to parse Suricata/Snort Rules file.
+  </Toast>
+  {/if}
+
+  {#if yaraParsed === -1}
+  <Toast color="red" class = "z-10 m-auto">
+    <svelte:fragment slot="icon">
+      <ExclamationCircleSolid class="w-5 h-5" />
+      <span class="sr-only">Warning icon</span>
+    </svelte:fragment>
+    Unable to parse Yara Rules file.
+  </Toast>
+  {/if}
+
+  {#if suricataParsed === 1}
+  <Toast color="green" class = "z-10 m-auto">
+    <svelte:fragment slot="icon">
+      <ExclamationCircleSolid class="w-5 h-5" />
+      <span class="sr-only">Success icon</span>
+    </svelte:fragment>
+    Suricata/Snort Rules is Valid.
+  </Toast>
+  {/if}
+
+  {#if yaraParsed === 1}
+  <Toast color="green" class = "z-10 m-auto">
+    <svelte:fragment slot="icon">
+      <ExclamationCircleSolid class="w-5 h-5" />
+      <span class="sr-only">Success icon</span>
+    </svelte:fragment>
+    Yara Rules file is Valid.
+  </Toast>
+  {/if}
+
 </main>
 
 <style>
@@ -179,7 +313,7 @@
     align-items: flex-start;
     margin: 1.5rem auto;
     width: 80%;
-    height: 300px;
+    height: 50vh;
     border: 5px solid #f4f5f6;
     padding: 20px;
   }
