@@ -34,7 +34,7 @@ rule HexExample {
 		// A few hex definitions demonstrating
 		$hex_string1 = { 0123456789ABCDEF }
 		$hex_string2 = { 0123456789abcdef }
-		$hex_string3 = { 01 23 45 67 89 ab cd ef }
+		$hex_string3 = { 77686174736170 }
 	
 	condition:
 		// Match any file containing 

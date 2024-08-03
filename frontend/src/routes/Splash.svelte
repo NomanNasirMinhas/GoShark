@@ -85,7 +85,7 @@
     .ok-msg {
       text-align: center;
       font-size: 1rem;
-      color: rgb(4, 131, 44);
+      color: rgb(244, 247, 245);
     }
 
   </style>

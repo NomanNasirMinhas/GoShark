@@ -17,9 +17,16 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "GoShark",
-		Width:  1024,
-		Height: 768,
+		// DisableResize:     true,
+		// Fullscreen:        true,
+		Title:     "GoShark",
+		Frameless: true,
+		// AlwaysOnTop:       true,
+		HideWindowOnClose: true,
+		MinHeight:         1024,
+		MinWidth:          1600,
+		// Width:         1024,
+		// Height:        768,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

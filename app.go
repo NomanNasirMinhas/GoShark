@@ -179,6 +179,7 @@ type PacketInfo struct {
 	YaraAlert       []string         `json:"yara_alert,omitempty"`
 	AlertType       int              `json:"alert_type,omitempty"`
 	AlertMessage    string           `json:"alert_msg,omitempty"`
+	DataDump        string           `json:"data_dump,omitempty"`
 }
 
 // PacketToJSON converts a gopacket.Packet to a JSON string
@@ -186,6 +187,7 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 	var packetInfo PacketInfo
 
 	packetInfo.Timestamp = packet.Metadata().Timestamp
+	packetInfo.DataDump = packet.Dump()
 	// Length is the size of the original packet.  Should always be >=
 	// CaptureLength.
 	packetInfo.Length = packet.Metadata().Length
@@ -577,7 +579,7 @@ func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
 
 			// println("Checking for yara string: ", s)
 			if containsstr(p, s) {
-				println("Packet contains ", p)
+				println("Packet contains ", s)
 				packInfo.YaraAlert = append(packInfo.YaraAlert, rule.Identifier+" Matched")
 				packInfo.AlertType = 1
 				packInfo.AlertMessage = "Yara Rule with ID: " + rule.Identifier + " Matched"
@@ -595,6 +597,7 @@ func removeSpacesAndNewlines(s string) string {
 	s = strings.ReplaceAll(s, " ", "")
 	s = strings.ReplaceAll(s, "\n", "")
 	s = strings.ReplaceAll(s, "\r", "") // For carriage returns
+	// print("Cleaned", s)
 	return s
 }
 

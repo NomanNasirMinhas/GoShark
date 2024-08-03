@@ -23,6 +23,7 @@
     const requests = writable([]);
     const alerts = writable([]);
     let scroll_to_bottom = true;
+    let show_with_alerts = false;
     let ac_hidden8 = true;
     let ac_current_packet = null;
     let capture_started = false;
@@ -95,18 +96,22 @@
             </h5>
             <CloseButton on:click={() => (ac_hidden8 = true)} class="mb-4 dark:text-white" />
         </div>
-        <p class="max-w-lg mb-6 text-sm text-gray-500 dark:text-gray-400">
-            {ac_current_packet ? ac_current_packet.payload : 'No packet selected'}
-        </p>
-        <Button color="light" href="/">Learn more</Button>
-        <Button href="/" class="px-4">Get access <ArrowRightOutline class="w-5 h-5 ms-2" /></Button>
+        {#if ac_current_packet}
+            {#each ac_current_packet.data_dump.split("---")  as l}
+            <p class="text-xs font-thin font-mono text-black max-h-96 mb-4">
+                {l}
+            </p>                
+            {/each}
+        {/if}
+        <!-- <Button color="light" href="/">Learn more</Button>
+        <Button href="/" class="px-4">Get access <ArrowRightOutline class="w-5 h-5 ms-2" /></Button> -->
     </Drawer>
 
     <!-- Navbar -->
     <Navbar class="flex flex-row justify-start fixed top-0 left-0 right-0 z-10">
         <NavBrand href="/">
             <img src={logo} class="me-3 h-6 sm:h-9" alt="Flowbite Logo" />
-            <span class="self-center whitespace-nowrap text-xl font-semibold dark:text-white">GoShark</span>
+            <span class="self-center whitespace-nowrap text-xl font-semibold dark:text-white">Home</span>
         </NavBrand>
         <div class="w-64 ">
             <Input type="text" placeholder="Enter a filter" bind:value={searchTerm}>
@@ -114,7 +119,15 @@
             </Input>
         </div>
         <div class="flex md:order-2">
-            <Checkbox class="mr-16" checked={scroll_to_bottom} on:click={()=> scroll_to_bottom = !scroll_to_bottom}>Scroll To End</Checkbox>
+            <div class="flex flex-col">
+                <Checkbox class="mr-16" checked={show_with_alerts} on:click={()=> {
+                    show_with_alerts = !show_with_alerts
+                    show_with_alerts ? searchTerm="alert" : searchTerm = ""
+                    
+                }}>Alerts</Checkbox>
+                <Checkbox class="mr-16" checked={scroll_to_bottom} on:click={()=> scroll_to_bottom = !scroll_to_bottom}>Scroll To End</Checkbox>
+            </div>
+            <div class="flex flex-col">
             <Button size="sm" color={capture_started ? 'red' : 'green'} on:click={toggleCapture}>
                 {#if capture_started}
                     <StopSolid class="w-5 h-5 me-2" /> Stop Capturing
@@ -122,7 +135,8 @@
                     <PlaySolid class="w-5 h-5 me-2" /> Start Capturing
                 {/if}
             </Button>
-            <p>Packets: {$requests.length}</p>
+            <p class="text-sm font-mono font-thin">Packets: {$requests.length}</p>
+        </div>
             <NavHamburger />
         </div>
     </Navbar>
@@ -130,7 +144,7 @@
     
     <!-- Packets Table -->
     <div class="packets_div fixed top-36 left-0 right-0 z-10" id="packets_div">
-                
+
         <table>
             <thead>
                 <tr>
