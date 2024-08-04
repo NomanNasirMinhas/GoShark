@@ -1,1 +1,0 @@
-alert https any any -> any any (msg:"FILESTORE pdf"; sid:8; rev:1;)
