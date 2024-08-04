@@ -6,3 +6,5 @@ frontend/dist
 *.bin
 suricataRules
 yaraRules
+go.mod
+go.sum 
