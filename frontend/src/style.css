@@ -18,8 +18,8 @@
 
   
 html {
-    background-color: #0f0112;
-    background-image: linear-gradient(43deg, #1f0126 0%, #240522 46%, #1b0227 100%);
+    background-color: rgb(15 23 42);
+    /* background-image: linear-gradient(43deg, #1f0126 0%, #240522 46%, #1b0227 100%); */
     text-align: center;
     color: white;
 }

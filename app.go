@@ -175,10 +175,9 @@ type PacketInfo struct {
 	Color           string           `json:"color,omitempty"`
 	SourceHost      string           `json:"source_host,omitempty"`
 	DestinationHost string           `json:"destination_host,omitempty"`
-	SuricataAlert   []string         `json:"suricata_alert,omitempty"`
-	YaraAlert       []string         `json:"yara_alert,omitempty"`
-	AlertType       int              `json:"alert_type,omitempty"`
-	AlertMessage    string           `json:"alert_msg,omitempty"`
+	SuricataAlert   []AlertMessage   `json:"suricata_alert,omitempty"`
+	YaraAlert       []AlertMessage   `json:"yara_alert,omitempty"`
+	HasAlert        bool             `json:"has_alert,omitempty"`
 	DataDump        string           `json:"data_dump,omitempty"`
 }
 
@@ -580,9 +579,14 @@ func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
 			// println("Checking for yara string: ", s)
 			if containsstr(p, s) {
 				println("Packet contains ", s)
-				packInfo.YaraAlert = append(packInfo.YaraAlert, rule.Identifier+" Matched")
-				packInfo.AlertType = 1
-				packInfo.AlertMessage = "Yara Rule with ID: " + rule.Identifier + " Matched"
+				var alert AlertMessage
+				alert.AlertMessage = rule.Identifier + " Matched"
+				alert.Timestamp = packInfo.Timestamp
+				alert.AlertType = 2
+				packInfo.YaraAlert = append(packInfo.YaraAlert, alert)
+				if !packInfo.HasAlert {
+					packInfo.HasAlert = true
+				}
 			}
 		}
 	}
@@ -629,18 +633,15 @@ func checkforSuricataAlert(packInfo PacketInfo) PacketInfo {
 				// Check source and destination IP and ports
 				if checkIPandPort(packInfo, srcIP, srcPort, dstIP, dstPort) {
 					fmt.Printf("Packet matches rule: %s\n", rule.Msg())
-					packInfo.AlertMessage = rule.Msg()
-					packInfo.AlertType = 1
+					var alert AlertMessage
+					alert.AlertMessage = rule.Msg()
+					alert.Timestamp = packInfo.Timestamp
+					alert.AlertType = 1
+					packInfo.YaraAlert = append(packInfo.YaraAlert, alert)
+					if !packInfo.HasAlert {
+						packInfo.HasAlert = true
+					}
 					return packInfo
-					// var alert AlertMessage
-					// alert.AlertMessage = rule.Msg()
-					// alert.Timestamp = packInfo.Timestamp
-					// alert.AlertType = 1
-
-					// jsonData, err := json.Marshal(alert)
-					// if err == nil {
-					// 	broadcastMessage(string(jsonData))
-					// }
 				}
 			}
 		}
