@@ -292,11 +292,19 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 }
 
 func (a *App) IsRoot() bool {
-	currentUser, err := user.Current()
-	if err != nil {
-		log.Fatalf("[isRoot] Unable to get current user: %s", err)
+	switch runtime.GOOS {
+	case "windows":
+		return true
+	case "linux", "darwin":
+		currentUser, err := user.Current()
+		if err != nil {
+			log.Fatalf("[isRoot] Unable to get current user: %s", err)
+		}
+		return currentUser.Username == "root"
+	default:
+		log.Printf("Unsupported platform: %s\n", runtime.GOOS)
+		return false
 	}
-	return currentUser.Username == "root"
 }
 
 // IsRunningAsAdmin checks if the program is running with administrative (Windows) or root (Linux/macOS) privileges.
