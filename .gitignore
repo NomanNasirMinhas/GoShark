@@ -4,3 +4,5 @@ frontend/dist
 .DS_Store
 *.pcap
 *.bin
+suricataRules
+yaraRules
