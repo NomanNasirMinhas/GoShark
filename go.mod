@@ -6,7 +6,7 @@ toolchain go1.21.5
 
 require (
 	github.com/miekg/dns v1.1.61
-	github.com/wailsapp/wails/v2 v2.7.1
+	github.com/wailsapp/wails/v2 v2.9.1
 )
 
 require (
