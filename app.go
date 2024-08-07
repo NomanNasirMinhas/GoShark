@@ -135,23 +135,6 @@ func (a *App) startup(ctx context.Context) {
 
 }
 
-type Flag struct {
-	Name  string `json:"name,omitempty"`
-	Value string `json:"value,omitempty"`
-}
-
-type LayerData struct {
-	Name       string `json:"name,omitempty"`
-	Src        string `json:"src,omitempty"`
-	Dst        string `json:"dst,omitempty"`
-	Protocol   string `json:"protocol,omitempty"`
-	LayerIndex int    `json:"layer_name,omitempty"`
-	Payload    []byte `json:"payload,omitempty"`
-	Contents   []byte `json:"contents,omitempty"`
-	Flags      []Flag `json:"flags,omitempty"`
-	String     string `json:"string,omitempty"`
-}
-
 type PacketInfoArr struct {
 	Packets []PacketInfo `json:"packets,omitempty"`
 }
@@ -200,66 +183,11 @@ type PacketInfo struct {
 	PacketHex       []byte           `json:"packet_hex,omitempty"`
 }
 
-// PacketToJSON converts a gopacket.Packet to a JSON string
+// PacketToJSON conver1ts a gopacket.Packet to a JSON string
 func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 	var packetInfo PacketInfo
 
-	for idx, layer := range packet.Layers() {
-		// println("Layer: ", layer.LayerType().String())
-		// // println("Layer: ", string(layer.))
-		// println("************************************************************************************")
-		var layer_data LayerData
-
-		switch l := layer.(type) {
-		case *layers.Ethernet:
-			layer_data.Src = l.SrcMAC.String()
-			layer_data.Dst = l.DstMAC.String()
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = l.EthernetType.String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
-			layer_data.Flags = append(layer_data.Flags, Flag{
-				Name:  "Length",
-				Value: string(l.Length),
-			})
-
-		case *layers.ARP:
-			layer_data.Src = string(l.SourceHwAddress)
-			layer_data.Dst = string(l.DstHwAddress)
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = l.Protocol.String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
-			layer_data.Flags = append(layer_data.Flags, Flag{
-				Name:  "AddrType",
-				Value: string(l.AddrType),
-			})
-			layer_data.Flags = append(layer_data.Flags, Flag{
-				Name:  "Operation",
-				Value: string(l.Operation),
-			})
-			layer_data.Flags = append(layer_data.Flags, Flag{
-				Name:  "ProtAddressSize",
-				Value: string(l.ProtAddressSize),
-			})
-			layer_data.Flags = append(layer_data.Flags, Flag{
-				Name:  "DstProtAddress",
-				Value: string(l.DstProtAddress),
-			})
-			layer_data.Flags = append(layer_data.Flags, Flag{
-				Name:  "SourceProtAddress",
-				Value: string(l.SourceProtAddress),
-			})
-
-		default:
-			// For unknown layers, use the Payload as a raw byte array
-			layer_data.Payload = layer.LayerPayload()
-		}
-
-		packetInfo.DataDump = append(packetInfo.DataDump, layer_data)
-	}
+	packetInfo.DataDump = GetLayers(packet)
 	packetInfo.Timestamp = packet.Metadata().Timestamp
 	// packetInfo.DataDump = packet.Dump()
 	packetInfo.PacketString = packet.String()
