@@ -343,7 +343,102 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 				Value: tls_change_cipher,
 			})
 
+		case *layers.IPv4:
+			layer_data.Src = l.SrcIP.String()
+			layer_data.Dst = l.DstIP.String()
+			layer_data.Name = l.LayerType().String()
+			layer_data.Protocol = l.Protocol.String()
+			layer_data.LayerIndex = idx
+			layer_data.Payload = l.Payload
+			layer_data.Contents = l.Contents
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "Length",
+				Value: l.Length,
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "Checksum",
+				Value: l.Checksum,
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "FragOffset",
+				Value: l.FragOffset,
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "Id",
+				Value: l.Id,
+			})
+			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+				Name:  "TrafficClass",
+				Value: l.Flags.String(),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "Version",
+				Value: uint16(l.Version),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "TOS",
+				Value: uint16(l.TOS),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "TTL",
+				Value: uint16(l.TTL),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "FragOffset",
+				Value: uint16(l.FragOffset),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "IHL",
+				Value: uint16(l.IHL),
+			})
+			//TODO: Parse l.Options
+			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+			// 	Name:  "TOS",
+			// 	Value: uint16(l.),
+			// })
+			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+			// 	Name:  "TOS",
+			// 	Value: uint16(l.TOS),
+			// })
+			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+			// 	Name:  "TOS",
+			// 	Value: uint16(l.TOS),
+			// })
+
+		case *layers.IPv6:
+			layer_data.Src = l.SrcIP.String()
+			layer_data.Dst = l.DstIP.String()
+			layer_data.Name = l.LayerType().String()
+			layer_data.LayerIndex = idx
+			layer_data.Payload = l.Payload
+			layer_data.Contents = l.Contents
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "Length",
+				Value: l.Length,
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "FlowLabel",
+				Value: uint16(l.FlowLabel),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "HopLimit",
+				Value: uint16(l.HopLimit),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "NextHeader",
+				Value: uint16(l.NextHeader),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "TrafficClass",
+				Value: uint16(l.TrafficClass),
+			})
+			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+				Name:  "Version",
+				Value: uint16(l.Version),
+			})
+
 		default:
+			layer_data.Protocol = layer.LayerType().String()
 			// For unknown layers, use the Payload as a raw byte array
 			layer_data.Payload = layer.LayerPayload()
 		}
@@ -364,8 +459,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 // 	LayerTypeEthernet                     = Done
 // 	LayerTypeGRE                          = gopacket.RegisterLayerType(18, gopacket.LayerTypeMetadata{Name: "GRE", Decoder: gopacket.DecodeFunc(decodeGRE)})
 // 	LayerTypeICMPv4                       = Done
-// 	LayerTypeIPv4                         = gopacket.RegisterLayerType(20, gopacket.LayerTypeMetadata{Name: "IPv4", Decoder: gopacket.DecodeFunc(decodeIPv4)})
-// 	LayerTypeIPv6                         = gopacket.RegisterLayerType(21, gopacket.LayerTypeMetadata{Name: "IPv6", Decoder: gopacket.DecodeFunc(decodeIPv6)})
+// 	LayerTypeIPv4                         = Done
+// 	LayerTypeIPv6                         = Done
 // 	LayerTypeLLC                          = gopacket.RegisterLayerType(22, gopacket.LayerTypeMetadata{Name: "LLC", Decoder: gopacket.DecodeFunc(decodeLLC)})
 // 	LayerTypeSNAP                         = gopacket.RegisterLayerType(23, gopacket.LayerTypeMetadata{Name: "SNAP", Decoder: gopacket.DecodeFunc(decodeSNAP)})
 // 	LayerTypeMPLS                         = gopacket.RegisterLayerType(24, gopacket.LayerTypeMetadata{Name: "MPLS", Decoder: gopacket.DecodeFunc(decodeMPLS)})
