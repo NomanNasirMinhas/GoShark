@@ -68,6 +68,43 @@
   onMount(() => connect());
   onDestroy(() => ws?.close());
 
+  function decodeBase64(base64, format) {
+    let result;
+    // Decode the base64 string to a binary string
+    const binaryString = atob(base64);
+
+    // Convert binary string to a Uint8Array
+    const byteArray = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      byteArray[i] = binaryString.charCodeAt(i);
+    }
+    switch (format) {
+      case "hex":
+        result = Array.from(byteArray)
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join(" ")
+          .toUpperCase();
+        break;
+
+      case "ascii":
+        result = byteArray.reduce(
+          (acc, byte) => acc + String.fromCharCode(byte),
+          ""
+        );
+        break;
+
+      case "utf-8":
+        const utf8Decoder = new TextDecoder("utf-8");
+        result = utf8Decoder.decode(byteArray);
+        break;
+
+      default:
+        return;
+    }
+    return result;
+    // Convert binary string to a UTF-8 string
+  }
+
   function connect() {
     ws = new WebSocket(WS_URL);
 
@@ -140,60 +177,81 @@
       </div>
       <div class="flex flex-row justify-betwwen">
         <div class="w-2/3 border-2 border-blue-900 p-8 bg-blue-800">
-          <Accordion activeClass="bg-blue-950 dark:bg-gray-800 text-blue-600 dark:text-white focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800" inactiveClass="text-gray-500 dark:text-gray-400 hover:bg-blue-900 dark:hover:bg-gray-800">
-            {#each ac_current_packet.data_dump as l}         
-            {#if l.name}
-            <AccordionItem>
-              <span
-                slot="header"
-                class="text-xs font-bold font-sans text-white hover:bg-blue-950"
-                >{l.src ? l.name + ": " +l.src + "->" + l.dst: l.name}
-              </span>
-              <div>
-                <h3 class="text-sm font-bold font-serif text-white">Content</h3>
+          <Accordion
+            activeClass="bg-blue-950 dark:bg-gray-800 text-blue-600 dark:text-white focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
+            inactiveClass="text-gray-500 dark:text-gray-400 hover:bg-blue-900 dark:hover:bg-gray-800"
+          >
+            {#each ac_current_packet.data_dump as l}
+              {#if l.name}
+                <AccordionItem>
+                  <span
+                    slot="header"
+                    class="text-xs font-bold font-sans text-white hover:bg-blue-950"
+                    >{l.src ? l.name + ": " + l.src + "->" + l.dst : l.name}
+                  </span>
+                  <div>
+                    <!-- <h3 class="text-sm font-bold font-serif text-white">Content</h3>
                 <span class="text-xs font-thin font-serif text-white break-words">
                   {l.content ? l.content : "No Content Found"}
-                </span>
+                </span> -->
 
-                <h3 class="text-sm font-bold font-serif text-white">Payload</h3>
-                <span class="text-xs font-thin font-serif text-white break-words">
-                  {l.payload ? l.payload : "No Payload Found"}
-                </span>
+                    {#if l.payload}
+                      <h3 class="text-sm font-bold font-serif text-white">
+                        Payload
+                      </h3>
+                      <div class="flex flex-row break-words">
+                        <p
+                          class="text-xs font-thin font-serif text-white break-words w-1/2"
+                        >
+                          {decodeBase64(l.payload, "hex")}
+                        </p>
 
-              <h3 class="text-sm font-bold font-serif text-white">Flags</h3>
-                {#if l.flags_int}
-                <div>
-                  {#each l.flags_int as f}
-                  {#if f.value}                    
-                  <span class="text-xs font-thin font-serif text-white">
-                    -- {f.name}: {f.value}
-                  </span>                        
-                  {/if}
-                  {/each}
-                </div>
-                {/if}
-                {#if l.flags_bool}
-                <div>
-                  {#each l.flags_bool as f}
-                  <span class="text-xs font-thin font-serif text-white">
-                    -- {f.name}: {f.value ? true:false}, 
-                  </span>                        
-                  {/each}
-                </div>
-                {/if}
-                {#if l.flags_str}
-                <div>
-                  {#each l.flags_str as f}
-                  <span class="text-xs font-thin font-serif text-white">
-                    -- {f.name}: {f.value ? true:false}
-                  </span>                        
-                  {/each}
-                </div>
-                {/if}
-              </div>
-            </AccordionItem>            
-              
-            {/if}   
+                        <p
+                          class="text-xs font-thin font-serif text-white break-words w-1/2"
+                        >
+                          {decodeBase64(l.payload, "ascii")}
+                        </p>
+                      </div>
+                    {/if}
+                    <!-- {l.payload ? decodeBase64(l.payload, 'ascii') : "No Payload Found"} -->
+
+                    <h3 class="text-sm font-bold font-serif text-white">
+                      Flags
+                    </h3>
+                    {#if l.flags_int}
+                      <div>
+                        {#each l.flags_int as f}
+                          {#if f.value}
+                            <span
+                              class="text-xs font-thin font-serif text-white"
+                            >
+                              -- {f.name}: {f.value}
+                            </span>
+                          {/if}
+                        {/each}
+                      </div>
+                    {/if}
+                    {#if l.flags_bool}
+                      <div>
+                        {#each l.flags_bool as f}
+                          <span class="text-xs font-thin font-serif text-white">
+                            -- {f.name}: {f.value ? true : false},
+                          </span>
+                        {/each}
+                      </div>
+                    {/if}
+                    {#if l.flags_str}
+                      <div>
+                        {#each l.flags_str as f}
+                          <span class="text-xs font-thin font-serif text-white">
+                            -- {f.name}: {f.value ? true : false}
+                          </span>
+                        {/each}
+                      </div>
+                    {/if}
+                  </div>
+                </AccordionItem>
+              {/if}
             {/each}
           </Accordion>
         </div>
@@ -322,18 +380,18 @@
               active_row_idx = null;
             }}
             on:click={() => {
-              ac_current_packet = item
-            //   ac_current_packet = ac_current_packet.filter(item => item.length > 0)
-            //   let obj = []
-            //   for (var i=0; i < ac_current_packet.length ; i = i+2){
-            //     obj.push({
-            //         "head": ac_current_packet[i],
-            //         "value": ac_current_packet[i+1]
-            //     })
-            //   }
-            // //   console.log("obj", obj)
-            //   ac_current_packet = obj
-              console.log("Tokens", ac_current_packet)
+              ac_current_packet = item;
+              //   ac_current_packet = ac_current_packet.filter(item => item.length > 0)
+              //   let obj = []
+              //   for (var i=0; i < ac_current_packet.length ; i = i+2){
+              //     obj.push({
+              //         "head": ac_current_packet[i],
+              //         "value": ac_current_packet[i+1]
+              //     })
+              //   }
+              // //   console.log("obj", obj)
+              //   ac_current_packet = obj
+              console.log("Tokens", ac_current_packet);
               ac_hidden8 = false;
             }}
           >

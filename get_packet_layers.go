@@ -57,8 +57,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			layer_data.Name = l.LayerType().String()
 			layer_data.Protocol = l.EthernetType.String()
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
 				Name:  "Length",
 				Value: l.Length,
@@ -67,8 +67,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 		case *layers.ICMPv4:
 			layer_data.Name = l.LayerType().String()
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
 				Name:  "Checksum",
 				Value: l.Checksum,
@@ -92,8 +92,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			layer_data.Name = l.LayerType().String()
 			layer_data.Protocol = l.Protocol.String()
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
 				Name:  "AddrType",
 				Value: l.AddrType.String(),
@@ -121,8 +121,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			layer_data.Name = l.LayerType().String()
 			layer_data.Protocol = "TCP"
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
 				Name:  "ACK",
 				Value: l.ACK,
@@ -194,8 +194,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
 			layer_data.Name = l.LayerType().String()
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
 				Name:  "Checksum",
 				Value: l.Checksum,
@@ -211,8 +211,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			layer_data.Name = l.LayerType().String()
 			layer_data.Protocol = "DNS"
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload()
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
 				Name:  "AddrType",
 				Value: l.ANCount,
@@ -353,8 +353,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			layer_data.Name = l.LayerType().String()
 			layer_data.Protocol = l.Protocol.String()
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
 				Name:  "Length",
 				Value: l.Length,
@@ -414,8 +414,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			layer_data.Dst = l.DstIP.String()
 			layer_data.Name = l.LayerType().String()
 			layer_data.LayerIndex = idx
-			layer_data.Payload = l.Payload
-			layer_data.Contents = l.Contents
+			layer_data.Payload = l.LayerPayload()
+			layer_data.Contents = l.LayerContents()
 			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
 				Name:  "Length",
 				Value: l.Length,
