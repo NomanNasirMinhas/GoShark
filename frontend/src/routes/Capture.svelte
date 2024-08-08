@@ -68,6 +68,28 @@
   onMount(() => connect());
   onDestroy(() => ws?.close());
 
+  function base64ToMacAddress(base64) {
+  // Decode the base64 string to a binary string
+  const binaryString = atob(base64);
+
+  // Convert binary string to a hexadecimal string
+  const hexArray = [];
+  for (let i = 0; i < binaryString.length; i++) {
+    const hex = binaryString.charCodeAt(i).toString(16).padStart(2, '0');
+    hexArray.push(hex);
+  }
+
+  // Ensure that we have exactly 6 bytes (12 hex characters)
+  if (hexArray.length !== 6) {
+    console.log("Invalid Base64 string for MAC address conversion");
+  }
+
+  // Format the hex string as a MAC address
+  const macAddress = hexArray.join(':').toUpperCase();
+
+  return macAddress;
+}
+
   function decodeBase64(base64, format) {
     console.log("Base64", base64);
     let result;
@@ -197,7 +219,7 @@
                           <p class="text-xs text-white mr-8">
                             <span class="font-bold font-serif">{key}: </span>
                             <span class="font-thin font-serif"
-                              >{l.layer[key]}</span
+                              >{key === "SrcMAC" || key === "DstMAC" ? base64ToMacAddress(l.layer[key]) : l.layer[key]}</span
                             >
                           </p>
                         {/if}
