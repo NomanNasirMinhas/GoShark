@@ -133,7 +133,7 @@ func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
 			// }
 
 			if startsAndEndsWithBraces(s) && containsHex(p_hex, removeBraceAndSpaces(s)) {
-				println("Packet contains ", s)
+				fmt.Printf("%s Packet Hex contains %s\n", packInfo.Timestamp, s)
 				var alert AlertMessage
 				alert.AlertMessage = rule.Identifier + " Matched"
 				alert.Timestamp = packInfo.Timestamp
@@ -148,7 +148,7 @@ func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
 
 				// println("Checking for yara string: ", s)
 				if containsstr(p_str, s) {
-					println("Packet contains ", s)
+					fmt.Printf("%s Packet String contains %s\n", packInfo.Timestamp, s)
 					var alert AlertMessage
 					alert.AlertMessage = rule.Identifier + " Matched"
 					alert.Timestamp = packInfo.Timestamp
