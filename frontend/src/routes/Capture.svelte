@@ -308,6 +308,7 @@
               No Alert Found
             </p>
           {/if}
+          <p class="mt-8 text-xs font-thin font-serif text-white break-words text-justify">{ac_current_packet.packet_string}</p>
         </div>
       </div>
       <!-- <Button color="light" href="/">Learn more</Button>
