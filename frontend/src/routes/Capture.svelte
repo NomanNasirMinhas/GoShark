@@ -157,7 +157,7 @@
   {#if ac_current_packet}
     <Drawer
       placement="bottom"
-      width="w-full max-h-2/3 bg-slate-950"
+      width="w-full max-h-96 bg-slate-950"
       transitionType="fly"
       transitionParams={ac_transitionParamsBottom}
       bind:hidden={ac_hidden8}
@@ -175,7 +175,7 @@
           class="mb-4 dark:text-white"
         />
       </div>
-      <div class="flex flex-row justify-betwwen">
+      <div class="flex flex-row justify-between">
         <div class="w-2/3 border-2 border-blue-900 p-8 bg-blue-800">
           <Accordion
             activeClass="bg-blue-950 dark:bg-gray-800 text-blue-600 dark:text-white focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
@@ -201,13 +201,15 @@
                       </h3>
                       <div class="flex flex-row break-words">
                         <p
-                          class="text-xs font-thin font-serif text-white break-words w-1/2"
+                          class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
                         >
                           {decodeBase64(l.payload, "hex")}
                         </p>
 
+                        <p class="w-16"></p>
+
                         <p
-                          class="text-xs font-thin font-serif text-white break-words w-1/2"
+                          class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
                         >
                           {decodeBase64(l.payload, "ascii")}
                         </p>
@@ -219,7 +221,7 @@
                       Flags
                     </h3>
                     {#if l.flags_int}
-                      <div>
+                      <div class="text-justify">
                         {#each l.flags_int as f}
                           {#if f.value}
                             <span
