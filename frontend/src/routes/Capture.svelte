@@ -69,6 +69,7 @@
   onDestroy(() => ws?.close());
 
   function decodeBase64(base64, format) {
+    console.log("Base64", base64)
     let result;
     // Decode the base64 string to a binary string
     const binaryString = atob(base64);
@@ -200,19 +201,19 @@
                         Payload
                       </h3>
                       <div class="flex flex-row break-words">
-                        <p
+                        <code
                           class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
                         >
                           {decodeBase64(l.payload, "hex")}
-                        </p>
+                      </code>
 
                         <p class="w-16"></p>
 
-                        <p
+                        <code
                           class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
                         >
                           {decodeBase64(l.payload, "ascii")}
-                        </p>
+                      </code>
                       </div>
                     {/if}
                     <!-- {l.payload ? decodeBase64(l.payload, 'ascii') : "No Payload Found"} -->
