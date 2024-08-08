@@ -120,7 +120,7 @@
   {#if ac_current_packet}
     <Drawer
       placement="bottom"
-      width="w-full max-h-96 bg-slate-950"
+      width="w-full max-h-2/3 bg-slate-950"
       transitionType="fly"
       transitionParams={ac_transitionParamsBottom}
       bind:hidden={ac_hidden8}
@@ -141,16 +141,59 @@
       <div class="flex flex-row justify-betwwen">
         <div class="w-2/3 border-2 border-blue-900 p-8 bg-blue-800">
           <Accordion activeClass="bg-blue-950 dark:bg-gray-800 text-blue-600 dark:text-white focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800" inactiveClass="text-gray-500 dark:text-gray-400 hover:bg-blue-900 dark:hover:bg-gray-800">
-            {#each ac_current_packet as l}            
+            {#each ac_current_packet.data_dump as l}         
+            {#if l.name}
             <AccordionItem>
               <span
                 slot="header"
                 class="text-xs font-bold font-sans text-white hover:bg-blue-950"
-                >{stripLeadingDashes(l["head"])}</span>
-              <p class="text-xs font-thin font-mono text-white">
-                {stripLeadingDashes(l["value"])}
-              </p>
+                >{l.src ? l.name + ": " +l.src + "->" + l.dst: l.name}
+              </span>
+              <div>
+                <h3 class="text-sm font-bold font-serif text-white">Content</h3>
+                <span class="text-xs font-thin font-serif text-white break-words">
+                  {l.content ? l.content : "No Content Found"}
+                </span>
+
+                <h3 class="text-sm font-bold font-serif text-white">Payload</h3>
+                <span class="text-xs font-thin font-serif text-white break-words">
+                  {l.payload ? l.payload : "No Payload Found"}
+                </span>
+
+              <h3 class="text-sm font-bold font-serif text-white">Flags</h3>
+                {#if l.flags_int}
+                <div>
+                  {#each l.flags_int as f}
+                  {#if f.value}                    
+                  <span class="text-xs font-thin font-serif text-white">
+                    -- {f.name}: {f.value}
+                  </span>                        
+                  {/if}
+                  {/each}
+                </div>
+                {/if}
+                {#if l.flags_bool}
+                <div>
+                  {#each l.flags_bool as f}
+                  <span class="text-xs font-thin font-serif text-white">
+                    -- {f.name}: {f.value ? true:false}, 
+                  </span>                        
+                  {/each}
+                </div>
+                {/if}
+                {#if l.flags_str}
+                <div>
+                  {#each l.flags_str as f}
+                  <span class="text-xs font-thin font-serif text-white">
+                    -- {f.name}: {f.value ? true:false}
+                  </span>                        
+                  {/each}
+                </div>
+                {/if}
+              </div>
             </AccordionItem>            
+              
+            {/if}   
             {/each}
           </Accordion>
         </div>
@@ -279,17 +322,17 @@
               active_row_idx = null;
             }}
             on:click={() => {
-              ac_current_packet = item.data_dump.split("---")
-              ac_current_packet = ac_current_packet.filter(item => item.length > 0)
-              let obj = []
-              for (var i=0; i < ac_current_packet.length ; i = i+2){
-                obj.push({
-                    "head": ac_current_packet[i],
-                    "value": ac_current_packet[i+1]
-                })
-              }
-            //   console.log("obj", obj)
-              ac_current_packet = obj
+              ac_current_packet = item
+            //   ac_current_packet = ac_current_packet.filter(item => item.length > 0)
+            //   let obj = []
+            //   for (var i=0; i < ac_current_packet.length ; i = i+2){
+            //     obj.push({
+            //         "head": ac_current_packet[i],
+            //         "value": ac_current_packet[i+1]
+            //     })
+            //   }
+            // //   console.log("obj", obj)
+            //   ac_current_packet = obj
               console.log("Tokens", ac_current_packet)
               ac_hidden8 = false;
             }}
