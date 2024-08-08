@@ -69,7 +69,7 @@
   onDestroy(() => ws?.close());
 
   function decodeBase64(base64, format) {
-    console.log("Base64", base64)
+    console.log("Base64", base64);
     let result;
     // Decode the base64 string to a binary string
     const binaryString = atob(base64);
@@ -190,69 +190,68 @@
                     class="text-xs font-bold font-sans text-white hover:bg-blue-950"
                     >{l.src ? l.name + ": " + l.src + "->" + l.dst : l.name}
                   </span>
-                  <div>
-                    <!-- <h3 class="text-sm font-bold font-serif text-white">Content</h3>
-                <span class="text-xs font-thin font-serif text-white break-words">
-                  {l.content ? l.content : "No Content Found"}
-                </span> -->
-
-                    {#if l.payload}
-                      <h3 class="text-sm font-bold font-serif text-white">
-                        Payload
-                      </h3>
-                      <div class="flex flex-row break-words">
-                        <code
-                          class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
-                        >
-                          {decodeBase64(l.payload, "hex")}
-                      </code>
-
-                        <p class="w-16"></p>
-
-                        <code
-                          class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
-                        >
-                          {decodeBase64(l.payload, "ascii")}
-                      </code>
-                      </div>
-                    {/if}
-                    <!-- {l.payload ? decodeBase64(l.payload, 'ascii') : "No Payload Found"} -->
-
-                    <h3 class="text-sm font-bold font-serif text-white">
-                      Flags
-                    </h3>
-                    {#if l.flags_int}
-                      <div class="text-justify">
-                        {#each l.flags_int as f}
-                          {#if f.value}
-                            <span
-                              class="text-xs font-thin font-serif text-white"
+                  {#if l.name !== "Payload"}
+                    <div class="grid grid-cols-4 gap-4">
+                      {#each Object.keys(l.layer) as key}
+                        {#if key != "Contents" && key != "Options" && key != "Payload" && l.layer[key] != null}
+                          <p class="text-xs text-white mr-8">
+                            <span class="font-bold font-serif">{key}: </span>
+                            <span class="font-thin font-serif"
+                              >{l.layer[key]}</span
                             >
-                              -- {f.name}: {f.value}
-                            </span>
-                          {/if}
-                        {/each}
-                      </div>
-                    {/if}
-                    {#if l.flags_bool}
-                      <div>
-                        {#each l.flags_bool as f}
-                          <span class="text-xs font-thin font-serif text-white">
-                            -- {f.name}: {f.value ? true : false},
-                          </span>
-                        {/each}
-                      </div>
-                    {/if}
-                    {#if l.flags_str}
-                      <div>
-                        {#each l.flags_str as f}
-                          <span class="text-xs font-thin font-serif text-white">
-                            -- {f.name}: {f.value ? true : false}
-                          </span>
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
+                          </p>
+                        {/if}
+                      {/each}
+                    </div>
+                  {/if}
+
+                  {#if l.name === "Payload"}
+                    <div class="mt-4">
+                      {#if l.layer}
+                        <!-- <h3 class="text-sm font-bold font-serif text-white">
+                          Data
+                        </h3> -->
+                        <div class="flex flex-row break-words">
+                          <code
+                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
+                          >
+                            {decodeBase64(l.layer, "hex")}
+                          </code>
+
+                          <p class="w-16"></p>
+
+                          <code
+                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
+                          >
+                            {decodeBase64(l.layer, "ascii")}
+                          </code>
+                        </div>
+                      {/if}
+                    </div>
+                  {:else}
+                    <div class="mt-8">
+                      {#if l.layer.Contents}
+                        <!-- <h3 class="text-sm font-bold font-serif text-white">
+                          Data
+                        </h3> -->
+                        <div class="flex flex-row break-words">
+                          <code
+                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
+                          >
+                            {decodeBase64(l.layer.Contents, "hex")}
+                          </code>
+
+                          <p class="w-16"></p>
+
+                          <code
+                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
+                          >
+                            {decodeBase64(l.layer.Contents, "ascii")}
+                          </code>
+                        </div>
+                      {/if}
+                    </div>
+                  {/if}
                 </AccordionItem>
               {/if}
             {/each}

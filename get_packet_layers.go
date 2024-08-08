@@ -1,10 +1,7 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 )
 
 type FlagInt struct {
@@ -28,429 +25,454 @@ type TLSAppData struct {
 }
 
 type LayerData struct {
-	Name       string     `json:"name,omitempty"`
-	Src        string     `json:"src,omitempty"`
-	Dst        string     `json:"dst,omitempty"`
-	Protocol   string     `json:"protocol,omitempty"`
-	LayerIndex int        `json:"layer_name,omitempty"`
-	Payload    []byte     `json:"payload,omitempty"`
-	Contents   []byte     `json:"contents,omitempty"`
-	Flags_Int  []FlagInt  `json:"flags_int,omitempty"`
-	Flags_Bool []FlagBool `json:"flags_bool,omitempty"`
-	Flags_Str  []FlagStr  `json:"flags_str,omitempty"`
-	String     string     `json:"string,omitempty"`
+	Name       string         `json:"name,omitempty"`
+	Src        string         `json:"src,omitempty"`
+	Dst        string         `json:"dst,omitempty"`
+	Protocol   string         `json:"protocol,omitempty"`
+	LayerIndex int            `json:"layer_name,omitempty"`
+	Payload    []byte         `json:"payload,omitempty"`
+	Contents   []byte         `json:"contents,omitempty"`
+	Flags_Int  []FlagInt      `json:"flags_int,omitempty"`
+	Flags_Bool []FlagBool     `json:"flags_bool,omitempty"`
+	Flags_Str  []FlagStr      `json:"flags_str,omitempty"`
+	String     string         `json:"string,omitempty"`
+	Layer      gopacket.Layer `json:"layer,omitempty"`
 }
 
 func GetLayers(packet gopacket.Packet) []LayerData {
 	var packetLayers []LayerData
 
-	for idx, layer := range packet.Layers() {
-		// println("Layer: ", layer.LayerType().String())
-		// // println("Layer: ", string(layer.))
-		// println("************************************************************************************")
+	for _, layer := range packet.Layers() {
 		var layer_data LayerData
-
-		switch l := layer.(type) {
-		case *layers.Ethernet:
-			layer_data.Src = l.SrcMAC.String()
-			layer_data.Dst = l.DstMAC.String()
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = l.EthernetType.String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Length",
-				Value: l.Length,
-			})
-
-		case *layers.ICMPv4:
-			layer_data.Name = l.LayerType().String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Checksum",
-				Value: l.Checksum,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Id",
-				Value: l.Id,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Seq",
-				Value: l.Seq,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "TypeCode",
-				Value: l.TypeCode.String(),
-			})
-
-		case *layers.ARP:
-			layer_data.Src = string(l.SourceHwAddress)
-			layer_data.Dst = string(l.DstHwAddress)
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = l.Protocol.String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "AddrType",
-				Value: l.AddrType.String(),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Operation",
-				Value: l.Operation,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "ProtAddressSize",
-				Value: uint16(l.ProtAddressSize),
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "DstProtAddress",
-				Value: string(l.DstProtAddress),
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "SourceProtAddress",
-				Value: string(l.SourceProtAddress),
-			})
-
-		case *layers.TCP:
-			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
-			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = "TCP"
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "ACK",
-				Value: l.ACK,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Ack",
-				Value: uint16(l.Ack),
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "CWR",
-				Value: l.CWR,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "ECE",
-				Value: l.ECE,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "FIN",
-				Value: l.FIN,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "NS",
-				Value: l.NS,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "PSH",
-				Value: l.PSH,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "RST",
-				Value: l.RST,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "SYN",
-				Value: l.SYN,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "URG",
-				Value: l.URG,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Checksum",
-				Value: l.Checksum,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "DataOffset",
-				Value: uint16(l.DataOffset),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Urgent",
-				Value: l.Urgent,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Window",
-				Value: l.Window,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Seq",
-				Value: uint16(l.Seq),
-			})
-			// TODO: Parse Options
-			// layer_data.Flags = append(layer_data.Flags, Flag{
-			// 	Name:  "SourceProtAddress",
-			// 	Value: string(l.Options),
-			// })
-
-		case *layers.UDP:
-			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
-			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
-			layer_data.Name = l.LayerType().String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Checksum",
-				Value: l.Checksum,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Length",
-				Value: l.Length,
-			})
-
-		case *layers.DNS:
-			// layer_data.Src = l.
-			// layer_data.Dst = string(l.DstHwAddress)
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = "DNS"
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "AddrType",
-				Value: l.ANCount,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Operation",
-				Value: l.ARCount,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "ProtAddressSize",
-				Value: l.ID,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "DstProtAddress",
-				Value: l.NSCount,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "SourceProtAddress",
-				Value: l.OpCode.String(),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "SourceProtAddress",
-				Value: l.QDCount,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "SourceProtAddress",
-				Value: l.ResponseCode.String(),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "SourceProtAddress",
-				Value: uint16(l.Z),
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "SourceProtAddress",
-				Value: l.OpCode.String(),
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "SourceProtAddress",
-				Value: l.TC,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "SourceProtAddress",
-				Value: l.ResponseCode.String(),
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "SourceProtAddress",
-				Value: l.AA,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "SourceProtAddress",
-				Value: l.QR,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "SourceProtAddress",
-				Value: l.RA,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "SourceProtAddress",
-				Value: l.RD,
-			})
-			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
-				Name:  "SourceProtAddress",
-				Value: l.TC,
-			})
-			// TODO: Parse Additionals
-			// layer_data.Flags = append(layer_data.Flags, Flag{
-			// 	Name:  "SourceProtAddress",
-			// 	Value: ,l.Additionals),
-			// })
-
-			// layer_data.Flags = append(layer_data.Flags, Flag{
-			// 	Name:  "SourceProtAddress",
-			// 	Value: ,l.Answers),
-			// })
-			// layer_data.Flags = append(layer_data.Flags, Flag{
-			// 	Name:  "SourceProtAddress",
-			// 	Value: ,l.Authorities),
-			// })
-			// layer_data.Flags = append(layer_data.Flags, Flag{
-			// 	Name:  "SourceProtAddress",
-			// 	Value: ,l.Questions),
-			// })
-
-		case *layers.TLS:
-			// layer_data.Src = l
-			// layer_data.Dst = string(l.DstHwAddress)
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = "TLS"
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			var tls_app_data = ""
-			var tls_alerts = ""
-			var tls_handshake = ""
-			var tls_change_cipher = ""
-			for _, v := range l.AppData {
-				//TODO: Parse other fields
-				tls_app_data = tls_app_data + string(v.Payload)
-			}
-			for _, v := range l.Alert {
-				//TODO: Parse other fields
-				tls_alerts = tls_alerts + string(v.EncryptedMsg)
-			}
-			for _, v := range l.ChangeCipherSpec {
-				//TODO: Parse other fields
-				tls_change_cipher = tls_change_cipher + v.Message.String()
-			}
-			for _, v := range l.Handshake {
-				//TODO: Parse other fields
-				tls_handshake = tls_handshake + v.ContentType.String()
-			}
-
-			// TODO: Parse Alerts
-			// layer_data.Flags = append(layer_data.Flags, Flag{
-			// 	Name:  "AddrType",
-			// 	Value: l.Alert,
-			// })
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "TLS_AppData",
-				Value: tls_app_data,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "TLS_Alerts",
-				Value: tls_alerts,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "TLS_Handshake",
-				Value: tls_handshake,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "TLS_Change_Cipher",
-				Value: tls_change_cipher,
-			})
-
-		case *layers.IPv4:
-			layer_data.Src = l.SrcIP.String()
-			layer_data.Dst = l.DstIP.String()
-			layer_data.Name = l.LayerType().String()
-			layer_data.Protocol = l.Protocol.String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Length",
-				Value: l.Length,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Checksum",
-				Value: l.Checksum,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "FragOffset",
-				Value: l.FragOffset,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Id",
-				Value: l.Id,
-			})
-			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
-				Name:  "TrafficClass",
-				Value: l.Flags.String(),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Version",
-				Value: uint16(l.Version),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "TOS",
-				Value: uint16(l.TOS),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "TTL",
-				Value: uint16(l.TTL),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "FragOffset",
-				Value: uint16(l.FragOffset),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "IHL",
-				Value: uint16(l.IHL),
-			})
-			//TODO: Parse l.Options
-			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-			// 	Name:  "TOS",
-			// 	Value: uint16(l.),
-			// })
-			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-			// 	Name:  "TOS",
-			// 	Value: uint16(l.TOS),
-			// })
-			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-			// 	Name:  "TOS",
-			// 	Value: uint16(l.TOS),
-			// })
-
-		case *layers.IPv6:
-			layer_data.Src = l.SrcIP.String()
-			layer_data.Dst = l.DstIP.String()
-			layer_data.Name = l.LayerType().String()
-			layer_data.LayerIndex = idx
-			layer_data.Payload = l.LayerPayload()
-			layer_data.Contents = l.LayerContents()
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Length",
-				Value: l.Length,
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "FlowLabel",
-				Value: uint16(l.FlowLabel),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "HopLimit",
-				Value: uint16(l.HopLimit),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "NextHeader",
-				Value: uint16(l.NextHeader),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "TrafficClass",
-				Value: uint16(l.TrafficClass),
-			})
-			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
-				Name:  "Version",
-				Value: uint16(l.Version),
-			})
-
-		default:
-			layer_data.Protocol = layer.LayerType().String()
-			// For unknown layers, use the Payload as a raw byte array
-			layer_data.Payload = layer.LayerPayload()
-		}
-
+		layer_data.Layer = layer
+		layer_data.Name = layer.LayerType().String()
 		packetLayers = append(packetLayers, layer_data)
 	}
 
 	return packetLayers
+
+	/*
+	   		return packetLayers
+
+	   		// println("Layer: ", layer.LayerType().String())
+	   		// // println("Layer: ", string(layer.))
+	   		// println("************************************************************************************")
+	   		var layer_data LayerData
+
+	   		switch l := layer.(type) {
+	   		case *layers.Ethernet:
+	   			// ly := packet.Layer(layers.LayerTypeEthernet)
+	   			layer_data.Layer = l
+	   			layer_data.Src = l.SrcMAC.String()
+	   			layer_data.Dst = l.DstMAC.String()
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.Protocol = l.EthernetType.String()
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Length",
+	   				Value: l.Length,
+	   			})
+
+	   		case *layers.ICMPv4:
+	   			layer_data.Layer = l
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Checksum",
+	   				Value: l.Checksum,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Id",
+	   				Value: l.Id,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Seq",
+	   				Value: l.Seq,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "TypeCode",
+	   				Value: l.TypeCode.String(),
+	   			})
+
+	   		case *layers.ARP:
+	   			layer_data.Layer = l
+	   			layer_data.Src = string(l.SourceHwAddress)
+	   			layer_data.Dst = string(l.DstHwAddress)
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.Protocol = l.Protocol.String()
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "AddrType",
+	   				Value: l.AddrType.String(),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Operation",
+	   				Value: l.Operation,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "ProtAddressSize",
+	   				Value: uint16(l.ProtAddressSize),
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "DstProtAddress",
+	   				Value: string(l.DstProtAddress),
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "SourceProtAddress",
+	   				Value: string(l.SourceProtAddress),
+	   			})
+
+	   		case *layers.TCP:
+	   			layer_data.Layer = l
+	   			// tcpLayer := packet.Layer(layers.LayerTypeTCP)
+	   			// layer_data.Layer = tcpLayer
+	   			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
+	   			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.Protocol = "TCP"
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "ACK",
+	   				Value: l.ACK,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Ack",
+	   				Value: uint16(l.Ack),
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "CWR",
+	   				Value: l.CWR,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "ECE",
+	   				Value: l.ECE,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "FIN",
+	   				Value: l.FIN,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "NS",
+	   				Value: l.NS,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "PSH",
+	   				Value: l.PSH,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "RST",
+	   				Value: l.RST,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "SYN",
+	   				Value: l.SYN,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "URG",
+	   				Value: l.URG,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Checksum",
+	   				Value: l.Checksum,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "DataOffset",
+	   				Value: uint16(l.DataOffset),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Urgent",
+	   				Value: l.Urgent,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Window",
+	   				Value: l.Window,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Seq",
+	   				Value: uint16(l.Seq),
+	   			})
+	   			// TODO: Parse Options
+	   			// layer_data.Flags = append(layer_data.Flags, Flag{
+	   			// 	Name:  "SourceProtAddress",
+	   			// 	Value: string(l.Options),
+	   			// })
+
+	   		case *layers.UDP:
+	   			layer_data.Layer = l
+	   			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
+	   			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Checksum",
+	   				Value: l.Checksum,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Length",
+	   				Value: l.Length,
+	   			})
+
+	   		case *layers.DNS:
+	   			layer_data.Layer = l
+	   			// layer_data.Src = l.
+	   			// layer_data.Dst = string(l.DstHwAddress)
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.Protocol = "DNS"
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "AddrType",
+	   				Value: l.ANCount,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Operation",
+	   				Value: l.ARCount,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "ProtAddressSize",
+	   				Value: l.ID,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "DstProtAddress",
+	   				Value: l.NSCount,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.OpCode.String(),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.QDCount,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.ResponseCode.String(),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "SourceProtAddress",
+	   				Value: uint16(l.Z),
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.OpCode.String(),
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.TC,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.ResponseCode.String(),
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.AA,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.QR,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.RA,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.RD,
+	   			})
+	   			layer_data.Flags_Bool = append(layer_data.Flags_Bool, FlagBool{
+	   				Name:  "SourceProtAddress",
+	   				Value: l.TC,
+	   			})
+	   			// TODO: Parse Additionals
+	   			// layer_data.Flags = append(layer_data.Flags, Flag{
+	   			// 	Name:  "SourceProtAddress",
+	   			// 	Value: ,l.Additionals),
+	   			// })
+
+	   			// layer_data.Flags = append(layer_data.Flags, Flag{
+	   			// 	Name:  "SourceProtAddress",
+	   			// 	Value: ,l.Answers),
+	   			// })
+	   			// layer_data.Flags = append(layer_data.Flags, Flag{
+	   			// 	Name:  "SourceProtAddress",
+	   			// 	Value: ,l.Authorities),
+	   			// })
+	   			// layer_data.Flags = append(layer_data.Flags, Flag{
+	   			// 	Name:  "SourceProtAddress",
+	   			// 	Value: ,l.Questions),
+	   			// })
+
+	   		case *layers.TLS:
+	   			layer_data.Layer = l
+	   			// layer_data.Src = l
+	   			// layer_data.Dst = string(l.DstHwAddress)
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.Protocol = "TLS"
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			var tls_app_data = ""
+	   			var tls_alerts = ""
+	   			var tls_handshake = ""
+	   			var tls_change_cipher = ""
+	   			for _, v := range l.AppData {
+	   				//TODO: Parse other fields
+	   				tls_app_data = tls_app_data + string(v.Payload)
+	   			}
+	   			for _, v := range l.Alert {
+	   				//TODO: Parse other fields
+	   				tls_alerts = tls_alerts + string(v.EncryptedMsg)
+	   			}
+	   			for _, v := range l.ChangeCipherSpec {
+	   				//TODO: Parse other fields
+	   				tls_change_cipher = tls_change_cipher + v.Message.String()
+	   			}
+	   			for _, v := range l.Handshake {
+	   				//TODO: Parse other fields
+	   				tls_handshake = tls_handshake + v.ContentType.String()
+	   			}
+
+	   			// TODO: Parse Alerts
+	   			// layer_data.Flags = append(layer_data.Flags, Flag{
+	   			// 	Name:  "AddrType",
+	   			// 	Value: l.Alert,
+	   			// })
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "TLS_AppData",
+	   				Value: tls_app_data,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "TLS_Alerts",
+	   				Value: tls_alerts,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "TLS_Handshake",
+	   				Value: tls_handshake,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "TLS_Change_Cipher",
+	   				Value: tls_change_cipher,
+	   			})
+
+	   		case *layers.IPv4:
+	   			layer_data.Layer = l
+	   			layer_data.Src = l.SrcIP.String()
+	   			layer_data.Dst = l.DstIP.String()
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.Protocol = l.Protocol.String()
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Length",
+	   				Value: l.Length,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Checksum",
+	   				Value: l.Checksum,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "FragOffset",
+	   				Value: l.FragOffset,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Id",
+	   				Value: l.Id,
+	   			})
+	   			layer_data.Flags_Str = append(layer_data.Flags_Str, FlagStr{
+	   				Name:  "TrafficClass",
+	   				Value: l.Flags.String(),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Version",
+	   				Value: uint16(l.Version),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "TOS",
+	   				Value: uint16(l.TOS),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "TTL",
+	   				Value: uint16(l.TTL),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "FragOffset",
+	   				Value: uint16(l.FragOffset),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "IHL",
+	   				Value: uint16(l.IHL),
+	   			})
+	   			//TODO: Parse l.Options
+	   			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   			// 	Name:  "TOS",
+	   			// 	Value: uint16(l.),
+	   			// })
+	   			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   			// 	Name:  "TOS",
+	   			// 	Value: uint16(l.TOS),
+	   			// })
+	   			// layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   			// 	Name:  "TOS",
+	   			// 	Value: uint16(l.TOS),
+	   			// })
+
+	   		case *layers.IPv6:
+	   			layer_data.Layer = l
+	   			layer_data.Src = l.SrcIP.String()
+	   			layer_data.Dst = l.DstIP.String()
+	   			layer_data.Name = l.LayerType().String()
+	   			layer_data.LayerIndex = idx
+	   			layer_data.Payload = l.LayerPayload()
+	   			layer_data.Contents = l.LayerContents()
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Length",
+	   				Value: l.Length,
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "FlowLabel",
+	   				Value: uint16(l.FlowLabel),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "HopLimit",
+	   				Value: uint16(l.HopLimit),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "NextHeader",
+	   				Value: uint16(l.NextHeader),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "TrafficClass",
+	   				Value: uint16(l.TrafficClass),
+	   			})
+	   			layer_data.Flags_Int = append(layer_data.Flags_Int, FlagInt{
+	   				Name:  "Version",
+	   				Value: uint16(l.Version),
+	   			})
+
+	   		default:
+	   			layer_data.Protocol = layer.LayerType().String()
+	   			// For unknown layers, use the Payload as a raw byte array
+	   			layer_data.Payload = layer.LayerPayload()
+	   		}
+
+	   		packetLayers = append(packetLayers, layer_data)
+	   	}
+
+	   return packetLayers
+	*/
 }
 
 //  LayerTypeARP                          = Done
