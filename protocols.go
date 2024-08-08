@@ -228,9 +228,11 @@ func GetL2Protocol(protocolNumber uint8) string {
 }
 
 // GetAppProtocol returns the application layer protocol name and color for the given protocol number and port.
-func GetAppProtocol(protocolNumber uint8, port uint16) (string, string) {
+func GetAppProtocol(protocolNumber uint8, dst_port uint16, src_port uint16) (string, string) {
 	if protocolPorts, found := appProtocols[protocolNumber]; found {
-		if protocol, found := protocolPorts[port]; found {
+		if protocol, found := protocolPorts[dst_port]; found {
+			return protocol.Name, protocol.Color
+		} else if protocol, found := protocolPorts[src_port]; found {
 			return protocol.Name, protocol.Color
 		}
 	}
@@ -248,11 +250,14 @@ func GenerateColor(index int) string {
 }
 
 // GetProtocolDescription returns the protocol description for a given type and port.
-func GetProtocolDescription(protocols map[string]map[int]string, protocolType int, port int) (string, string) {
+func GetProtocolDescription(protocols map[string]map[int]string, protocolType int, dst_port int, src_port int) (string, string) {
 	protocol_type_str := l2Protocols[uint8(protocolType)]
 	if protocol, found := protocols[protocol_type_str]; found {
-		if description, found := protocol[port]; found {
-			color := GenerateColor(port)
+		if description, found := protocol[dst_port]; found {
+			color := GenerateColor(dst_port)
+			return description, color
+		} else if description, found := protocol[src_port]; found {
+			color := GenerateColor(src_port)
 			return description, color
 		}
 	}

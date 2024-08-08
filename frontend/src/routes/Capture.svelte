@@ -59,7 +59,7 @@
 
   // Reactive statements
   $: filteredItems = $requests.filter((item) =>
-    JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase())
+    JSON.stringify(item.packet_string).toLowerCase().includes(searchTerm.toLowerCase())
   );
   $: capture_iface = $userStore.capture_iface;
   $: capture_promisc = $userStore.capture_promisc;

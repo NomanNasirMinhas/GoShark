@@ -239,7 +239,7 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 			packetInfo.DstPort = strings.Split(tcpPacket.DstPort.String(), "(")[0]
 			// packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
 			// println("Destination Port", int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
-			packetInfo.AppProtocol, packetInfo.Color = GetProtocolDescription(protocols_list, int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
+			packetInfo.AppProtocol, packetInfo.Color = GetProtocolDescription(protocols_list, int(packetInfo.IP.Protocol), int(tcpPacket.DstPort), int(tcpPacket.SrcPort))
 		}
 	}
 	if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
