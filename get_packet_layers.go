@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -114,8 +116,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			})
 
 		case *layers.TCP:
-			layer_data.Src = l.SrcPort.String()
-			layer_data.Dst = l.DstPort.String()
+			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
+			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
 			layer_data.Name = l.LayerType().String()
 			layer_data.Protocol = "TCP"
 			layer_data.LayerIndex = idx
@@ -188,6 +190,8 @@ func GetLayers(packet gopacket.Packet) []LayerData {
 			// })
 
 		case *layers.UDP:
+			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
+			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
 			layer_data.Name = l.LayerType().String()
 			layer_data.LayerIndex = idx
 			layer_data.Payload = l.Payload
