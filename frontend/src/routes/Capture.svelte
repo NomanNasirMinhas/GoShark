@@ -19,7 +19,9 @@
     Button,
     Checkbox,
     AccordionItem,
-    Accordion, Toast, Modal
+    Accordion,
+    Toast,
+    Modal,
   } from "flowbite-svelte";
   import {
     InfoCircleSolid,
@@ -40,7 +42,8 @@
   import { sineIn } from "svelte/easing";
   import { l2_protocols, appProtocols } from "./../consts/protocols";
 
-  const WS_URL = "ws://localhost:4444/ws";
+  const WS1_URL = "ws://localhost:4444/ws1";
+  const WS2_URL = "ws://localhost:4445/ws2";
   const ac_transitionParamsBottom = { y: 320, duration: 200, easing: sineIn };
 
   const requests = writable([]);
@@ -55,47 +58,50 @@
   let active_row_color = "#063970";
   let active_row_idx;
 
-  let ws;
-  let is_loading = false
-  let toast_message = ""
-  let toast_color = ""
+  let ws1;
+  let ws2;
+  let is_loading = false;
+  let toast_message = "";
+  let toast_color = "";
 
   // Reactive statements
   $: filteredItems = $requests.filter((item) =>
-    JSON.stringify(item.packet_string).toLowerCase().includes(searchTerm.toLowerCase())
+    JSON.stringify(item.packet_string)
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
   );
   $: capture_iface = $userStore.capture_iface;
   $: capture_promisc = $userStore.capture_promisc;
 
   // Lifecycle hooks
   onMount(() => connect());
-  onDestroy(() => ws?.close());
+  onDestroy(() => ws1?.close());
 
   function base64ToMacAddress(base64) {
-    try{
-  // Decode the base64 string to a binary string
-  const binaryString = atob(base64);
+    try {
+      // Decode the base64 string to a binary string
+      const binaryString = atob(base64);
 
-  // Convert binary string to a hexadecimal string
-  const hexArray = [];
-  for (let i = 0; i < binaryString.length; i++) {
-    const hex = binaryString.charCodeAt(i).toString(16).padStart(2, '0');
-    hexArray.push(hex);
+      // Convert binary string to a hexadecimal string
+      const hexArray = [];
+      for (let i = 0; i < binaryString.length; i++) {
+        const hex = binaryString.charCodeAt(i).toString(16).padStart(2, "0");
+        hexArray.push(hex);
+      }
+
+      // Ensure that we have exactly 6 bytes (12 hex characters)
+      if (hexArray.length !== 6) {
+        //console.log("Invalid Base64 string for MAC address conversion");
+      }
+
+      // Format the hex string as a MAC address
+      const macAddress = hexArray.join(":").toUpperCase();
+
+      return macAddress;
+    } catch (e) {
+      console.log("Mac Parse Exception", e);
+    }
   }
-
-  // Ensure that we have exactly 6 bytes (12 hex characters)
-  if (hexArray.length !== 6) {
-    //console.log("Invalid Base64 string for MAC address conversion");
-  }
-
-  // Format the hex string as a MAC address
-  const macAddress = hexArray.join(':').toUpperCase();
-
-  return macAddress;
-} catch(e){
-  console.log("Mac Parse Exception", e)
-}
-}
 
   function decodeBase64(base64, format) {
     //console.log("Base64", base64);
@@ -136,40 +142,60 @@
   }
 
   function connect() {
-    ws = new WebSocket(WS_URL);
+    try {
+      ws1 = new WebSocket(WS1_URL);
+      ws2 = new WebSocket(WS2_URL);
 
-    ws.addEventListener("message", (event) => {
-      const pcapData = JSON.parse(event.data);
-      if(pcapData.layers){
-        console.log("Got Packet Details for Packet Id: ", pcapData.packet_id)
-        ac_current_packet = pcapData
-        ac_hidden8 = false
-      } else{
-        //console.log("Received message from server:", pcapData);
-        requests.update((old) => [...old, pcapData]);
-      }
-      if (scroll_to_bottom) scrollToEnd();
-    });
+      ws2.addEventListener("message", (event) => {
+        const pcapData = JSON.parse(event.data);        
+          console.log(
+            "Got Packet Details s for Packet Id: ",
+            pcapData.packet_id
+          );
+          ac_current_packet = pcapData;
+          ac_hidden8 = false;        
+        if (scroll_to_bottom) scrollToEnd();
+      });
 
-    ws.addEventListener("error", (err) => console.log("WebSocket error:", err));
-    ws.addEventListener("close", () =>
-      console.log("WebSocket connection closed")
-    );
+      ws2.addEventListener("error", (err) =>
+        console.log("WebSocket error:", err)
+      );
+      ws2.addEventListener("close", () =>
+        console.log("WebSocket connection closed")
+      );
 
-    StartCapture(capture_iface, capture_promisc, "", export_file, true);
-    capture_started = true;
+      ws1.addEventListener("message", (event) => {
+        const pcapData = JSON.parse(event.data);
+          // console.log("Received message from server:", pcapData);
+          requests.update((old) => [...old, pcapData]);        
+        if (scroll_to_bottom) scrollToEnd();
+      });
+
+      ws1.addEventListener("error", (err) =>
+        console.log("WebSocket error:", err)
+      );
+      ws1.addEventListener("close", () =>
+        console.log("WebSocket connection closed")
+      );
+
+      StartCapture(capture_iface, capture_promisc, "", export_file, true);
+      capture_started = true;
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async function toggleCapture() {
     if (capture_started) {
       //console.log("Stopping capture");
-      is_loading = true
+      is_loading = true;
       let res = await StopCapture();
-      if(res){
-        is_loading=false
+      if (res) {
+        is_loading = false;
       }
 
-      ws.close();
+      ws1.close();
+      ws2.close();
       capture_started = false;
       //console.log("Capture stopped");
     } else {
@@ -194,8 +220,12 @@
 </script>
 
 <main>
-  <Modal title="Loading..." bind:open={is_loading} class="bg-blue-950 text-base leading-relaxed font-mono text-orange-500">
-    <p class="">Please Wait while the operation completes.</p>    
+  <Modal
+    title="Loading..."
+    bind:open={is_loading}
+    class="bg-blue-950 text-base leading-relaxed font-mono text-orange-500"
+  >
+    <p class="">Please Wait while the operation completes.</p>
   </Modal>
   <!-- Drawer -->
   {#if ac_current_packet}
@@ -240,7 +270,9 @@
                           <p class="text-xs text-white mr-8">
                             <span class="font-bold font-serif">{key}: </span>
                             <span class="font-thin font-serif"
-                              >{base64ToMacAddress(l.layer[key]) ? base64ToMacAddress(l.layer[key]) : l.layer[key]}</span
+                              >{base64ToMacAddress(l.layer[key])
+                                ? base64ToMacAddress(l.layer[key])
+                                : l.layer[key]}</span
                             >
                           </p>
                         {/if}
@@ -329,7 +361,11 @@
               No Alert Found
             </p>
           {/if}
-          <p class="mt-8 text-xs font-thin font-serif text-white break-words text-justify">{ac_current_packet.packet_string}</p>
+          <p
+            class="mt-8 text-xs font-thin font-serif text-white break-words text-justify"
+          >
+            {ac_current_packet.packet_string}
+          </p>
         </div>
       </div>
       <!-- <Button color="light" href="/">Learn more</Button>
@@ -426,19 +462,18 @@
             on:mouseleave={() => {
               active_row_idx = null;
             }}
-            on:click={() => {              
-              ac_current_packet = item;            
-              ws.send(`pack-info_${item.packet_id}`)
+            on:click={() => {
+              console.log("Clicked");
+              ac_current_packet = item;
+              ws2.send(`pack-info_${item.packet_id}`);
               // ac_hidden8 = false;
             }}
           >
-            <td>{item.packet_id}</td>            
-              <td>{item.timestamp}</td>
-              <td>{item.length || "N/A"}</td>
-            <td>{item.source}</td>            
-            <td
-              >{item.destination}</td
-            >            
+            <td>{item.packet_id}</td>
+            <td>{item.timestamp}</td>
+            <td>{item.length || "N/A"}</td>
+            <td>{item.source}</td>
+            <td>{item.destination}</td>
             <td>
               {item.protocol}
             </td>

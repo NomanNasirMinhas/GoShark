@@ -48,7 +48,8 @@ const suricataRulesDir = "suricataRules"
 const yaraRulesDir = "yaraRules"
 
 // Slice to store connected WebSocket clients
-var clients []*websocket.Conn
+var clients1 []*websocket.Conn
+var clients2 []*websocket.Conn
 var handles []*pcap.Handle
 var capturePackets []gopacket.Packet
 var mu sync.Mutex
@@ -62,7 +63,7 @@ type WsMessage struct {
 }
 
 // Handler function for WebSocket connection
-func wsHandler(w http.ResponseWriter, r *http.Request) {
+func ws1Handler(w http.ResponseWriter, r *http.Request) {
 	// Upgrade the HTTP request to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -73,7 +74,42 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	mu.Lock()
-	clients = append(clients, conn)
+	clients1 = append(clients1, conn)
+	mu.Unlock()
+
+	// Listen for messages from the client
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			fmt.Println("Client disconnected:", err)
+			break
+		}
+	}
+
+	mu.Lock()
+	// Remove the client from the list
+	for i, c := range clients1 {
+		if c == conn {
+			clients1 = append(clients1[:i], clients1[i+1:]...)
+			break
+		}
+	}
+	mu.Unlock()
+}
+
+// Handler function for WebSocket connection
+func ws2Handler(w http.ResponseWriter, r *http.Request) {
+	// Upgrade the HTTP request to a WebSocket connection
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Println("Error upgrading:", err)
+		return
+	}
+	fmt.Println("Client connected -> ", conn.RemoteAddr())
+	defer conn.Close()
+
+	mu.Lock()
+	clients2 = append(clients2, conn)
 	mu.Unlock()
 
 	// Listen for messages from the client
@@ -96,8 +132,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 							jsonData, err := json.Marshal(p)
 							if err == nil {
 								packetStr := string(jsonData)
-								println(packetStr)
-								broadcastMessage(packetStr)
+								// println(packetStr)
+								broadcastMessage2(packetStr)
 							}
 						}
 					}
@@ -111,9 +147,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	mu.Lock()
 	// Remove the client from the list
-	for i, c := range clients {
+	for i, c := range clients2 {
 		if c == conn {
-			clients = append(clients[:i], clients[i+1:]...)
+			clients2 = append(clients2[:i], clients2[i+1:]...)
 			break
 		}
 	}
@@ -121,12 +157,25 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Function to broadcast messages to all connected clients
-func broadcastMessage(message string) {
-	print(".")
+func broadcastMessage1(message string) {
+	// print(".")
 	mu.Lock()
 	defer mu.Unlock()
 
-	for _, conn := range clients {
+	for _, conn := range clients1 {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+			fmt.Println("Error sending message:", err)
+		}
+	}
+}
+
+// Function to broadcast messages to all connected clients
+func broadcastMessage2(message string) {
+	// print(message)
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, conn := range clients2 {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
 			fmt.Println("Error sending message:", err)
 		}
@@ -141,7 +190,7 @@ func NewApp() *App {
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
-	http.HandleFunc("/ws", wsHandler)
+	http.HandleFunc("/ws1", ws1Handler)
 
 	// Start the WebSocket server in a new goroutine
 	go func() {
@@ -150,6 +199,16 @@ func (a *App) startup(ctx context.Context) {
 			fmt.Println("Error starting server:", err)
 		} else {
 			fmt.Println("Server running on 4444 port")
+		}
+	}()
+
+	http.HandleFunc("/ws2", ws2Handler)
+	go func() {
+		fmt.Println("WebSocket server starting on :4445")
+		if err := http.ListenAndServe("0.0.0.0:4445", nil); err != nil {
+			fmt.Println("Error starting server:", err)
+		} else {
+			fmt.Println("Server running on 4445 port")
 		}
 	}()
 
@@ -323,7 +382,7 @@ func PacketToJSON(packet gopacket.Packet) (PacketLayers, error) {
 	if err != nil {
 		return packetDetails, err
 	}
-	broadcastMessage(string(jsonData))
+	broadcastMessage1(string(jsonData))
 	return packetDetails, nil
 }
 

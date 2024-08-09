@@ -22,9 +22,9 @@ To build a redistributable, production mode package, use `wails build`.
 - [x] Export to PCAP
 - [x] IP Address Resultion
 - [ ] Import PCAP
-- [ ] Add Suricata Rules
-- [ ] Add Snort Rules
-- [ ] Add Yara Rules
+- [x] Add Suricata Rules
+- [x] Add Snort Rules
+- [x] Add Yara Rules
 - [ ] Add File Detection
 - [ ] Add File Extraction
 - [ ] Add Base64 Detection
