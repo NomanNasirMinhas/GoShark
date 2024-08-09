@@ -44,10 +44,12 @@
 
   const WS1_URL = "ws://localhost:4444/ws1";
   const WS2_URL = "ws://localhost:4445/ws2";
+  const WS3_URL = "ws://localhost:4446/ws3";
+
   const ac_transitionParamsBottom = { y: 320, duration: 200, easing: sineIn };
 
   const requests = writable([]);
-  const alerts = writable([]);
+  // const alerts = writable([]);
   let scroll_to_bottom = true;
   let show_with_alerts = false;
   let ac_hidden8 = true;
@@ -60,6 +62,8 @@
 
   let ws1;
   let ws2;
+  let ws3;
+
   let is_loading = false;
   let toast_message = "";
   let toast_color = "";
@@ -80,11 +84,18 @@
       ws2 = new WebSocket(WS2_URL);
 
       ws2.addEventListener("message", (event) => {
-        const pcapData = JSON.parse(event.data);
-        console.log("Got Packet Details s for Packet Id: ", pcapData.packet_id);
-        ac_current_packet = pcapData;
-        ac_hidden8 = false;
-        if (scroll_to_bottom) scrollToEnd();
+        // if (event.data.startsWith("AlertMsg_")) {          
+        // } else {
+          const pcapData = JSON.parse(event.data);
+          console.log(
+            "Got Packet Details s for Packet Id: ",
+            pcapData.packet_id
+          );
+          ac_current_packet = pcapData;
+          // is_loading = false;
+          ac_hidden8 = false;
+          // if (scroll_to_bottom) scrollToEnd();
+        // }
       });
 
       ws2.addEventListener("error", (err) =>
@@ -98,6 +109,7 @@
   onDestroy(() => {
     ws1?.close();
     ws2?.close();
+    ws3?.close();
   });
 
   function base64ToMacAddress(base64) {
@@ -120,7 +132,7 @@
       // Format the hex string as a MAC address
       const macAddress = hexArray.join(":").toUpperCase();
 
-      return macAddress;
+      if (macAddress.length === 17) return macAddress;
     } catch (e) {
       console.log("Mac Parse Exception", e);
     }
@@ -167,6 +179,7 @@
   function connect() {
     try {
       ws1 = new WebSocket(WS1_URL);
+      ws3 = new WebSocket(WS3_URL);
 
       ws1.addEventListener("message", (event) => {
         const pcapData = JSON.parse(event.data);
@@ -181,6 +194,37 @@
       ws1.addEventListener("close", () =>
         console.log("WebSocket connection closed")
       );
+      
+
+      ws3.addEventListener("message", (event) => {
+        // console.log("Alert Message", event.data);
+          let data = event.data.split("_");
+          let packet_id = data[1];
+          let has_alert = data[2] === "true";
+          requests.update((requestsList) => {
+            return requestsList.map((element) => {
+              if (element.packet_id == packet_id) {
+                console.log("Packet ID ", packet_id, " has match ", has_alert)
+                return {
+                  ...element,
+                  has_alert: has_alert,
+                };
+              }
+              return element;
+            });
+          });
+        // console.log("Received message from server:", pcapData);
+        // requests.update((old) => [...old, pcapData]);
+        // if (scroll_to_bottom) scrollToEnd();
+      });
+
+      ws3.addEventListener("error", (err) =>
+        console.log("WebSocket error:", err)
+      );
+      ws3.addEventListener("close", () =>
+        console.log("WebSocket connection closed")
+      );
+
 
       StartCapture(capture_iface, capture_promisc, "", export_file, true);
       capture_started = true;
@@ -227,6 +271,7 @@
   <Modal
     title="Loading..."
     bind:open={is_loading}
+    color='orange'
     class="bg-blue-950 text-base leading-relaxed font-mono text-orange-500"
   >
     <p class="">Please Wait while the operation completes.</p>
@@ -467,8 +512,9 @@
               active_row_idx = null;
             }}
             on:click={() => {
+              // is_loading = true
               console.log("Clicked");
-              ac_current_packet = item;
+              // ac_current_packet = item;
               ws2.send(`pack-info_${item.packet_id}`);
               // ac_hidden8 = false;
             }}

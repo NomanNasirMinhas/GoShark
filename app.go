@@ -50,6 +50,7 @@ const yaraRulesDir = "yaraRules"
 // Slice to store connected WebSocket clients
 var clients1 []*websocket.Conn
 var clients2 []*websocket.Conn
+var clients3 []*websocket.Conn
 var handles []*pcap.Handle
 var capturePackets []gopacket.Packet
 var mu sync.Mutex
@@ -120,28 +121,28 @@ func ws2Handler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		go func() {
-			msg_token := strings.Split(string(msg), "_")
-			fmt.Printf("%s\n", msg_token)
-			if msg_token[0] == "pack-info" {
-				id, err := strconv.ParseInt(msg_token[1], 10, 64)
-				if err == nil {
-					fmt.Printf("Getting packet details of %d", id)
-					for _, p := range pack_info {
-						if p.PacketID == id {
-							jsonData, err := json.Marshal(p)
-							if err == nil {
-								packetStr := string(jsonData)
-								// println(packetStr)
-								broadcastMessage2(packetStr)
-							}
+		// go func() {
+		msg_token := strings.Split(string(msg), "_")
+		fmt.Printf("%s\n", msg_token)
+		if msg_token[0] == "pack-info" {
+			id, err := strconv.ParseInt(msg_token[1], 10, 64)
+			if err == nil {
+				fmt.Printf("Getting packet details of %d\n", id)
+				for _, p := range pack_info {
+					if p.PacketID == id {
+						jsonData, err := json.Marshal(p)
+						if err == nil {
+							packetStr := string(jsonData)
+							// println(packetStr)
+							broadcastMessage2(packetStr)
 						}
 					}
-					// Convert to JSON
-
 				}
+				// Convert to JSON
+
 			}
-		}()
+		}
+		// }()
 
 	}
 
@@ -150,6 +151,42 @@ func ws2Handler(w http.ResponseWriter, r *http.Request) {
 	for i, c := range clients2 {
 		if c == conn {
 			clients2 = append(clients2[:i], clients2[i+1:]...)
+			break
+		}
+	}
+	mu.Unlock()
+}
+
+// Handler function for WebSocket connection
+func ws3Handler(w http.ResponseWriter, r *http.Request) {
+	// Upgrade the HTTP request to a WebSocket connection
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Println("Error upgrading:", err)
+		return
+	}
+	fmt.Println("Client connected -> ", conn.RemoteAddr())
+	defer conn.Close()
+
+	mu.Lock()
+	clients3 = append(clients3, conn)
+	mu.Unlock()
+
+	// Listen for messages from the client
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			fmt.Println("Client disconnected:", err)
+			break
+		}
+
+	}
+
+	mu.Lock()
+	// Remove the client from the list
+	for i, c := range clients3 {
+		if c == conn {
+			clients3 = append(clients3[:i], clients3[i+1:]...)
 			break
 		}
 	}
@@ -171,11 +208,23 @@ func broadcastMessage1(message string) {
 
 // Function to broadcast messages to all connected clients
 func broadcastMessage2(message string) {
-	// print(message)
+	print("sending packet details message\n")
 	mu.Lock()
 	defer mu.Unlock()
 
 	for _, conn := range clients2 {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+			fmt.Println("Error sending message:", err)
+		}
+	}
+}
+
+func broadcastMessage3(message string) {
+	// print(message + "\n")
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, conn := range clients3 {
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
 			fmt.Println("Error sending message:", err)
 		}
@@ -206,6 +255,16 @@ func (a *App) startup(ctx context.Context) {
 	go func() {
 		fmt.Println("WebSocket server starting on :4445")
 		if err := http.ListenAndServe("0.0.0.0:4445", nil); err != nil {
+			fmt.Println("Error starting server:", err)
+		} else {
+			fmt.Println("Server running on 4445 port")
+		}
+	}()
+
+	http.HandleFunc("/ws3", ws3Handler)
+	go func() {
+		fmt.Println("WebSocket server starting on :4446")
+		if err := http.ListenAndServe("0.0.0.0:4446", nil); err != nil {
 			fmt.Println("Error starting server:", err)
 		} else {
 			fmt.Println("Server running on 4445 port")
@@ -515,17 +574,22 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 
 		packLayers, _ := PacketToJSON(packet)
 
-		go func() {
+		// go func() {
 
-			pack_info = append(pack_info, packLayers)
-			if len(suricataRules) > 0 {
-				packLayers = checkforSuricataAlert(packLayers)
-			}
+		pack_info = append(pack_info, packLayers)
+		if len(suricataRules) > 0 {
+			packLayers = checkforSuricataAlert(packLayers)
+		}
 
-			if len(yaraRules) > 0 {
-				packLayers = checkForYaraMatch(packet, packLayers)
-			}
-		}()
+		if len(yaraRules) > 0 {
+			packLayers = checkForYaraMatch(packet, packLayers)
+		}
+
+		if packLayers.HasAlert {
+			alert_msg := "AlertMsg_" + strconv.FormatInt(packLayers.PacketID, 10) + "_" + strconv.FormatBool(packLayers.HasAlert)
+			broadcastMessage3(alert_msg)
+		}
+		// }()
 	}
 }
 
