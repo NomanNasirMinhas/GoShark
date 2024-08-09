@@ -19,8 +19,8 @@ func main() {
 	err := wails.Run(&options.App{
 		// DisableResize:     true,
 		// Fullscreen:        true,
-		Title:     "GoShark",
-		Frameless: true,
+		Title: "GoShark",
+		// Frameless: true,
 		// AlwaysOnTop:       true,
 		HideWindowOnClose: true,
 		MinHeight:         1024,
