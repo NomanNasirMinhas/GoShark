@@ -227,11 +227,6 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 			packetInfo.DestinationIP6 = ipv6Packet.DstIP.String()
 		}
 	}
-	if arpLayer := packet.Layer(layers.LayerTypeARP); arpLayer != nil {
-		if arpPacket, ok := arpLayer.(*layers.ARP); ok {
-			packetInfo.ARP = arpPacket
-		}
-	}
 	if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 		if tcpPacket, ok := tcpLayer.(*layers.TCP); ok {
 			packetInfo.TCP = tcpPacket
@@ -241,36 +236,6 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 			// println("Destination Port", int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
 			packetInfo.AppProtocol, packetInfo.Color = GetProtocolDescription(protocols_list, int(packetInfo.IP.Protocol), int(tcpPacket.DstPort), int(tcpPacket.SrcPort))
 		}
-	}
-	if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
-		if udpPacket, ok := udpLayer.(*layers.UDP); ok {
-			packetInfo.UDP = udpPacket
-		}
-	}
-	if icmpv4Layer := packet.Layer(layers.LayerTypeICMPv4); icmpv4Layer != nil {
-		if icmpv4Packet, ok := icmpv4Layer.(*layers.ICMPv4); ok {
-			packetInfo.ICMPv4 = icmpv4Packet
-		}
-	}
-	if icmpv6Layer := packet.Layer(layers.LayerTypeICMPv6); icmpv6Layer != nil {
-		if icmpv6Packet, ok := icmpv6Layer.(*layers.ICMPv6); ok {
-			packetInfo.ICMPv6 = icmpv6Packet
-		}
-	}
-
-	if packet.ApplicationLayer() != nil {
-		packetInfo.Details = string(packet.ApplicationLayer().Payload())
-	} else if packet.TransportLayer() != nil {
-		packetInfo.Details = string(packet.TransportLayer().LayerPayload())
-	} else if packet.NetworkLayer() != nil {
-		packetInfo.Details = string(packet.NetworkLayer().LayerPayload())
-	} else {
-		packetInfo.Details = string(packet.LinkLayer().LayerPayload())
-	}
-
-	// Get payload and check for nil
-	if appLayer := packet.ApplicationLayer(); appLayer != nil {
-		packetInfo.Payload = appLayer.Payload()
 	}
 
 	// Include any error occurred during decoding
