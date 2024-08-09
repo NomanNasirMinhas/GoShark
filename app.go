@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -139,55 +138,41 @@ type PacketInfoArr struct {
 }
 
 type AlertMessage struct {
-	Timestamp    time.Time `json:"timestamp,omitempty"`
-	AlertType    int       `json:"alert_type,omitempty"`
-	AlertMessage string    `json:"alert_msg,omitempty"`
+	Timestamp    int64  `json:"timestamp,omitempty"`
+	AlertType    int    `json:"alert_type,omitempty"`
+	AlertMessage string `json:"alert_msg,omitempty"`
 }
 
 // PacketInfo holds the decoded information from the packet
 type PacketInfo struct {
-	Timestamp       time.Time        `json:"timestamp,omitempty"`
-	CaptureLength   int              `json:"cap_length,omitempty"`
-	Length          int              `json:"length,omitempty"`
-	Ethernet        *layers.Ethernet `json:"ethernet,omitempty"`
-	IP              *layers.IPv4     `json:"ip,omitempty"`
-	IPv6            *layers.IPv6     `json:"ipv6,omitempty"`
-	ARP             *layers.ARP      `json:"arp,omitempty"`
-	TCP             *layers.TCP      `json:"tcp,omitempty"`
-	UDP             *layers.UDP      `json:"udp,omitempty"`
-	ICMPv4          *layers.ICMPv4   `json:"icmpv4,omitempty"`
-	ICMPv6          *layers.ICMPv6   `json:"icmpv6,omitempty"`
-	Payload         []byte           `json:"payload,omitempty"`
-	DecodeError     error            `json:"decode_error,omitempty"`
-	SourceMAC       string           `json:"source_mac,omitempty"`
-	DestinationMac  string           `json:"destination_mac,omitempty"`
-	SourceIP4       string           `json:"source_ip_4,omitempty"`
-	DestinationIP4  string           `json:"destination_ip_4,omitempty"`
-	SourceIP6       string           `json:"source_ip_6,omitempty"`
-	DestinationIP6  string           `json:"destination_ip_6,omitempty"`
-	SrcPort         string           `json:"src_port,omitempty"`
-	DstPort         string           `json:"dst_port,omitempty"`
-	AppProtocol     string           `json:"protocol,omitempty"`
-	L2Protocol      string           `json:"l2_protocol,omitempty"`
-	L1Protocol      string           `json:"l1_protocol,omitempty"`
-	Details         string           `json:"details,omitempty"`
-	Color           string           `json:"color,omitempty"`
-	SourceHost      string           `json:"source_host,omitempty"`
-	DestinationHost string           `json:"destination_host,omitempty"`
-	SuricataAlert   []AlertMessage   `json:"suricata_alert,omitempty"`
-	YaraAlert       []AlertMessage   `json:"yara_alert,omitempty"`
-	HasAlert        bool             `json:"has_alert,omitempty"`
-	DataDump        []LayerData      `json:"data_dump,omitempty"`
-	PacketString    string           `json:"packet_string,omitempty"`
-	PacketHex       []byte           `json:"packet_hex,omitempty"`
+	Timestamp     int64          `json:"timestamp,omitempty"`
+	CaptureLength int            `json:"cap_length,omitempty"`
+	Length        int            `json:"length,omitempty"`
+	ICMPv4        *layers.ICMPv4 `json:"icmpv4,omitempty"`
+	ICMPv6        *layers.ICMPv6 `json:"icmpv6,omitempty"`
+	Payload       []byte         `json:"payload,omitempty"`
+	DecodeError   error          `json:"decode_error,omitempty"`
+	Source        string         `json:"source,omitempty"`
+	Destination   string         `json:"destination,omitempty"`
+	SrcPort       string         `json:"src_port,omitempty"`
+	DstPort       string         `json:"dst_port,omitempty"`
+	AppProtocol   string         `json:"app_protocol,omitempty"`
+	Color         string         `json:"color,omitempty"`
+	SuricataAlert []AlertMessage `json:"suricata_alert,omitempty"`
+	YaraAlert     []AlertMessage `json:"yara_alert,omitempty"`
+	HasAlert      bool           `json:"has_alert,omitempty"`
+	DataDump      []LayerData    `json:"data_dump,omitempty"`
+	PacketString  string         `json:"packet_string,omitempty"`
+	PacketHex     []byte         `json:"packet_hex,omitempty"`
+	Protocol      string         `json:"protocol,omitempty"`
 }
 
 // PacketToJSON conver1ts a gopacket.Packet to a JSON string
 func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 	var packetInfo PacketInfo
 
-	packetInfo.DataDump = GetLayers(packet)
-	packetInfo.Timestamp = packet.Metadata().Timestamp
+	packetInfo.DataDump, packetInfo.Protocol = GetLayers(packet)
+	packetInfo.Timestamp = packet.Metadata().Timestamp.Unix()
 	// packetInfo.DataDump = packet.Dump()
 	packetInfo.PacketString = packet.String()
 	packetInfo.PacketHex = packet.Data()
@@ -199,43 +184,78 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 	// Decode layers and check for nil pointers
 	if ethLayer := packet.Layer(layers.LayerTypeEthernet); ethLayer != nil {
 		if ethernetPacket, ok := ethLayer.(*layers.Ethernet); ok {
-			packetInfo.Ethernet = ethernetPacket
-			packetInfo.SourceMAC = ethernetPacket.SrcMAC.String()
-			packetInfo.DestinationMac = ethernetPacket.DstMAC.String()
+			packetInfo.Source = strings.ToUpper(ethernetPacket.SrcMAC.String())
+			packetInfo.Destination = strings.ToUpper(ethernetPacket.DstMAC.String())
 		}
 	}
+	var ipProtocol layers.IPProtocol
 	if ipLayer := packet.Layer(layers.LayerTypeIPv4); ipLayer != nil {
 		if ipPacket, ok := ipLayer.(*layers.IPv4); ok {
-			packetInfo.IP = ipPacket
-			packetInfo.SourceIP4 = ipPacket.SrcIP.String()
-			packetInfo.DestinationIP4 = ipPacket.DstIP.String()
-			src_list, err := net.LookupAddr(packetInfo.SourceIP4)
-			if err == nil {
-				packetInfo.SourceHost = strings.Join(src_list, ", ")
-			}
-			dst_src, err := net.LookupAddr(packetInfo.DestinationIP4)
-			if err == nil {
-				packetInfo.DestinationHost = strings.Join(dst_src, ", ")
-			}
-			packetInfo.L2Protocol = l2Protocols[uint8(ipPacket.Protocol)]
+			packetInfo.Source = ipPacket.SrcIP.String()
+			packetInfo.Destination = ipPacket.DstIP.String()
+			ipProtocol = ipPacket.Protocol
+			// src_list, err := net.LookupAddr(packetInfo.SourceIP4)
+			// if err == nil {
+			// 	packetInfo.SourceHost = strings.Join(src_list, ", ")
+			// }
+			// dst_src, err := net.LookupAddr(packetInfo.DestinationIP4)
+			// if err == nil {
+			// 	packetInfo.DestinationHost = strings.Join(dst_src, ", ")
+			// }
+			// packetInfo.L2Protocol = l2Protocols[uint8(ipPacket.Protocol)]
 		}
 	}
 	if ipv6Layer := packet.Layer(layers.LayerTypeIPv6); ipv6Layer != nil {
 		if ipv6Packet, ok := ipv6Layer.(*layers.IPv6); ok {
-			packetInfo.IPv6 = ipv6Packet
-			packetInfo.SourceIP6 = ipv6Packet.SrcIP.String()
-			packetInfo.DestinationIP6 = ipv6Packet.DstIP.String()
+			packetInfo.Source = ipv6Packet.SrcIP.String()
+			packetInfo.Destination = ipv6Packet.DstIP.String()
 		}
 	}
 	if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 		if tcpPacket, ok := tcpLayer.(*layers.TCP); ok {
-			packetInfo.TCP = tcpPacket
-			packetInfo.SrcPort = strings.Split(tcpPacket.SrcPort.String(), "(")[0]
-			packetInfo.DstPort = strings.Split(tcpPacket.DstPort.String(), "(")[0]
+			src_port_tokens := strings.Split(tcpPacket.SrcPort.String(), "(")
+			dst_port_tokens := strings.Split(tcpPacket.DstPort.String(), "(")
+
+			packetInfo.SrcPort = src_port_tokens[0]
+			packetInfo.DstPort = dst_port_tokens[0]
+
+			if len(src_port_tokens) > 1 {
+				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(src_port_tokens[1], ")"))
+			}
+
+			if len(dst_port_tokens) > 1 {
+				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(dst_port_tokens[1], ")"))
+			}
+
 			// packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
 			// println("Destination Port", int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
-			packetInfo.AppProtocol, packetInfo.Color = GetProtocolDescription(protocols_list, int(packetInfo.IP.Protocol), int(tcpPacket.DstPort), int(tcpPacket.SrcPort))
+			_, packetInfo.Color = GetProtocolDescription(protocols_list, int(ipProtocol), int(tcpPacket.DstPort), int(tcpPacket.SrcPort))
 		}
+	}
+
+	if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
+		if udpPacket, ok := udpLayer.(*layers.UDP); ok {
+			src_port_tokens := strings.Split(udpPacket.SrcPort.String(), "(")
+			dst_port_tokens := strings.Split(udpPacket.DstPort.String(), "(")
+
+			packetInfo.SrcPort = src_port_tokens[0]
+			packetInfo.DstPort = dst_port_tokens[0]
+
+			if len(src_port_tokens) > 1 {
+				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(src_port_tokens[1], ")"))
+			}
+
+			if len(dst_port_tokens) > 1 {
+				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(dst_port_tokens[1], ")"))
+			}
+			// packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
+			// println("Destination Port", int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
+			_, packetInfo.Color = GetProtocolDescription(protocols_list, int(ipProtocol), int(udpPacket.DstPort), int(udpPacket.SrcPort))
+		}
+	}
+
+	if len(packetInfo.AppProtocol) == 0 {
+		packetInfo.AppProtocol = "N/A"
 	}
 
 	// Include any error occurred during decoding
@@ -527,17 +547,17 @@ func checkProtocol(packet PacketInfo, protocol string) bool {
 // Helper function to check source and destination IP and ports
 func checkIPandPort(packet PacketInfo, srcIP, srcPort, dstIP, dstPort string) bool {
 
-	fmt.Printf("%s, %s, %s, %s, %s, %s, %s, %s\n", packet.SourceIP4, srcIP, packet.DestinationIP4, dstIP, packet.SrcPort, srcPort, packet.DstPort, dstPort)
+	// fmt.Printf("%s, %s, %s, %s, %s, %s, %s, %s\n", packet.SourceIP4, srcIP, packet.DestinationIP4, dstIP, packet.SrcPort, srcPort, packet.DstPort, dstPort)
 
 	// if packet.SourceIP4 == nil || packet.DestinationIP4 == nil || packet.SrcPort == nil || packet.DstPort == nil {
 	// 	return false
 	// }
 
 	// Check IP addresses
-	if srcIP != "any" && packet.SourceIP4 != srcIP {
+	if srcIP != "any" && packet.Source != srcIP {
 		return false
 	}
-	if dstIP != "any" && packet.DestinationIP4 != dstIP {
+	if dstIP != "any" && packet.Destination != dstIP {
 		return false
 	}
 

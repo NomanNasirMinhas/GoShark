@@ -39,17 +39,20 @@ type LayerData struct {
 	Layer      gopacket.Layer `json:"layer,omitempty"`
 }
 
-func GetLayers(packet gopacket.Packet) []LayerData {
+func GetLayers(packet gopacket.Packet) ([]LayerData, string) {
 	var packetLayers []LayerData
-
+	protocol_name := ""
 	for _, layer := range packet.Layers() {
 		var layer_data LayerData
 		layer_data.Layer = layer
 		layer_data.Name = layer.LayerType().String()
+		if layer.LayerType().String() != "Payload" {
+			protocol_name = layer.LayerType().String()
+		}
 		packetLayers = append(packetLayers, layer_data)
 	}
 
-	return packetLayers
+	return packetLayers, protocol_name
 
 	/*
 	   		return packetLayers

@@ -374,15 +374,16 @@
       <thead>
         <tr>
           <th>No.</th>
-          <th>*</th>
+          <!-- <th>*</th> -->
           <th>Timestamp</th>
+          <th>Length</th>
           <th>Source</th>
           <!-- <th>Source Addr</th> -->
           <th>Destination</th>
           <!-- <th>Destination Addr</th> -->
+          <th>Transport</th>
           <th>Protocol</th>
           <th>Port Flow</th>
-          <th>Length</th>
           <!-- <th>Details</th> -->
         </tr>
       </thead>
@@ -405,59 +406,27 @@
               active_row_idx = null;
             }}
             on:click={() => {
-              ac_current_packet = item;
-              //   ac_current_packet = ac_current_packet.filter(item => item.length > 0)
-              //   let obj = []
-              //   for (var i=0; i < ac_current_packet.length ; i = i+2){
-              //     obj.push({
-              //         "head": ac_current_packet[i],
-              //         "value": ac_current_packet[i+1]
-              //     })
-              //   }
-              // //   //console.log("obj", obj)
-              //   ac_current_packet = obj
-              //console.log("Tokens", ac_current_packet);
+              ac_current_packet = item;            
               ac_hidden8 = false;
             }}
           >
-            <td>{idx + 1}</td>
-            <td class="w-5"
-              >{#if item.has_alert}
-                <ExclamationCircleSolid
-                  class="w-5 h-5 text-red-500 dark:text-red-400"
-                />
-              {:else}
-                <CheckCircleSolid
-                  class="w-5 h-5 text-green-500 dark:text-green-400"
-                />
-              {/if}</td
-            >
-            <td>{item.timestamp}</td>
-            <td>{item.source_host || item.source_ip_4 || item.source_mac}</td>
-            <!-- <td>{item.source_ip_4 || item.source_mac}</td> -->
+            <td>{idx + 1}</td>            
+              <td>{item.timestamp}</td>
+              <td>{item.length || "N/A"}</td>
+            <td>{item.source}</td>            
             <td
-              >{item.destination_host ||
-                item.destination_ip_4 ||
-                item.destination_mac}</td
-            >
-            <!-- <td>{item.destination_ip_4 || item.destination_mac}</td> -->
+              >{item.destination}</td
+            >            
             <td>
-              {item.protocol || item.l2_protocol || "Unknown"}
+              {item.protocol}
+            </td>
+            <td>
+              {item.app_protocol}
             </td>
 
             <td>
-              {item.data_dump[2].layer.SrcPort || "N/A"} -> {item.data_dump[2].layer.DstPort || "N/A"}
+              {item.src_port || "N/A"} -> {item.dst_port || "N/A"}
             </td>
-
-            <td>{item.length || "N/A"}</td>
-            <!-- <td>
-                            <Button color="dark" size="xs" on:click={() => {
-                                ac_current_packet = item;
-                                ac_hidden8 = false;
-                            }}>
-                                Details
-                            </Button>
-                        </td> -->
           </tr>
         {/each}
       </tbody>
