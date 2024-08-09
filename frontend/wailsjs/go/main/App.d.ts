@@ -18,4 +18,4 @@ export function ParseSuricataRules(arg1:string,arg2:Array<number>):Promise<boole
 
 export function StartCapture(arg1:string,arg2:boolean,arg3:string,arg4:boolean,arg5:boolean):Promise<void>;
 
-export function StopCapture():Promise<void>;
+export function StopCapture():Promise<boolean>;

@@ -19,7 +19,7 @@
     Button,
     Checkbox,
     AccordionItem,
-    Accordion,
+    Accordion, Toast, Modal
   } from "flowbite-svelte";
   import {
     InfoCircleSolid,
@@ -56,6 +56,9 @@
   let active_row_idx;
 
   let ws;
+  let is_loading = false
+  let toast_message = ""
+  let toast_color = ""
 
   // Reactive statements
   $: filteredItems = $requests.filter((item) =>
@@ -150,7 +153,12 @@
   async function toggleCapture() {
     if (capture_started) {
       //console.log("Stopping capture");
-      await StopCapture();
+      is_loading = true
+      let res = await StopCapture();
+      if(res){
+        is_loading=false
+      }
+
       ws.close();
       capture_started = false;
       //console.log("Capture stopped");
@@ -176,6 +184,9 @@
 </script>
 
 <main>
+  <Modal title="Loading..." bind:open={is_loading} class="bg-blue-950 text-base leading-relaxed font-mono text-orange-500">
+    <p class="">Please Wait while the operation completes.</p>    
+  </Modal>
   <!-- Drawer -->
   {#if ac_current_packet}
     <Drawer
@@ -406,6 +417,7 @@
               active_row_idx = null;
             }}
             on:click={() => {
+              is_loading = true
               ac_current_packet = item;            
               ac_hidden8 = false;
             }}

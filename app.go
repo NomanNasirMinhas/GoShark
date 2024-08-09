@@ -72,11 +72,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Listen for messages from the client
 	for {
-		_, _, err := conn.ReadMessage()
+		msg_type, msg, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Println("Client disconnected:", err)
 			break
 		}
+		fmt.Printf("%d, %s, %s\n", msg_type, msg, err)
 	}
 
 	mu.Lock()
@@ -171,7 +172,7 @@ type PacketInfo struct {
 func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 	var packetInfo PacketInfo
 
-	packetInfo.DataDump, packetInfo.Protocol = GetLayers(packet)
+	_, packetInfo.Protocol = GetLayers(packet)
 	packetInfo.Timestamp = packet.Metadata().Timestamp.Unix()
 	// packetInfo.DataDump = packet.Dump()
 	packetInfo.PacketString = packet.String()
@@ -255,7 +256,7 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 	}
 
 	if len(packetInfo.AppProtocol) == 0 {
-		packetInfo.AppProtocol = "N/A"
+		packetInfo.AppProtocol = packetInfo.Protocol
 	}
 
 	// Include any error occurred during decoding
@@ -420,7 +421,7 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 	}
 }
 
-func (a *App) StopCapture() {
+func (a *App) StopCapture() bool {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -430,6 +431,7 @@ func (a *App) StopCapture() {
 	handles = handles[:0]
 	capturePackets = capturePackets[:0]
 	println("Packet Capture Stopped")
+	return true
 }
 
 // Create the suricataRules folder if it does not exist
