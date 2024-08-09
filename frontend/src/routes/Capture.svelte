@@ -74,8 +74,31 @@
   $: capture_promisc = $userStore.capture_promisc;
 
   // Lifecycle hooks
-  onMount(() => connect());
-  onDestroy(() => ws1?.close());
+  onMount(() => {
+    try {
+      connect();
+      ws2 = new WebSocket(WS2_URL);
+
+      ws2.addEventListener("message", (event) => {
+        const pcapData = JSON.parse(event.data);
+        console.log("Got Packet Details s for Packet Id: ", pcapData.packet_id);
+        ac_current_packet = pcapData;
+        ac_hidden8 = false;
+        if (scroll_to_bottom) scrollToEnd();
+      });
+
+      ws2.addEventListener("error", (err) =>
+        console.log("WebSocket error:", err)
+      );
+      ws2.addEventListener("close", () =>
+        console.log("WebSocket connection closed")
+      );
+    } catch (e) {}
+  });
+  onDestroy(() => {
+    ws1?.close();
+    ws2?.close();
+  });
 
   function base64ToMacAddress(base64) {
     try {
@@ -144,30 +167,11 @@
   function connect() {
     try {
       ws1 = new WebSocket(WS1_URL);
-      ws2 = new WebSocket(WS2_URL);
-
-      ws2.addEventListener("message", (event) => {
-        const pcapData = JSON.parse(event.data);        
-          console.log(
-            "Got Packet Details s for Packet Id: ",
-            pcapData.packet_id
-          );
-          ac_current_packet = pcapData;
-          ac_hidden8 = false;        
-        if (scroll_to_bottom) scrollToEnd();
-      });
-
-      ws2.addEventListener("error", (err) =>
-        console.log("WebSocket error:", err)
-      );
-      ws2.addEventListener("close", () =>
-        console.log("WebSocket connection closed")
-      );
 
       ws1.addEventListener("message", (event) => {
         const pcapData = JSON.parse(event.data);
-          // console.log("Received message from server:", pcapData);
-          requests.update((old) => [...old, pcapData]);        
+        // console.log("Received message from server:", pcapData);
+        requests.update((old) => [...old, pcapData]);
         if (scroll_to_bottom) scrollToEnd();
       });
 
@@ -195,7 +199,7 @@
       }
 
       ws1.close();
-      ws2.close();
+      // ws2.close();
       capture_started = false;
       //console.log("Capture stopped");
     } else {

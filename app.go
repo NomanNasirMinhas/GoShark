@@ -467,6 +467,9 @@ func (a *App) GetAllDevices() string {
 }
 
 func (a *App) StartCapture(iface string, promisc bool, filter string, export bool, saveFiles bool) {
+	Max_Pack_ID = 0
+	capturePackets = capturePackets[:0]
+	pack_info = pack_info[:0]
 	snaplen := int32(1600 * 2)
 
 	pcap_handle, err := pcap.OpenLive(iface, snaplen, promisc, pcap.BlockForever)
