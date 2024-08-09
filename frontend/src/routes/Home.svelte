@@ -63,7 +63,7 @@
     reader.onload = (event) => {
       // @ts-ignore
       fileBytes = new Uint8Array(event.target.result);
-      console.log('File bytes:', fileBytes);
+      //console.log('File bytes:', fileBytes);
     };
     
     reader.onerror = (event) => {
@@ -93,18 +93,18 @@
         return
       }
       fileBytes = Array.from(fileBytes)
-      console.log('File bytes 2 :', fileBytes);
+      //console.log('File bytes 2 :', fileBytes);
       
       let parsed = await ParseSuricataRules(file.name, fileBytes)
       fileBytes = []
-      console.log("Suricata Parsed", parsed)
+      //console.log("Suricata Parsed", parsed)
       if(!parsed){
         suricataParsed = -1;
       } else{
         suricataParsed = 1;
       }
     } catch (e){      
-      console.log("Ex:", e)      
+      //console.log("Ex:", e)      
     }
     }
   };
@@ -124,18 +124,18 @@
         return
       }
       fileBytes = Array.from(fileBytes)
-      console.log('File bytes 2 :', fileBytes);
+      //console.log('File bytes 2 :', fileBytes);
       
       let parsed = await LoadYaraRules(file.name, fileBytes)
       fileBytes = []
-      console.log("Suricata Parsed", parsed)
+      //console.log("Suricata Parsed", parsed)
       if(!parsed){
         yaraParsed = -1;
       } else{
         yaraParsed = 1;
       }
     } catch (e){      
-      console.log("Ex:", e)      
+      //console.log("Ex:", e)      
     }
     }
   };
@@ -146,9 +146,9 @@
       isAdmin = await IsRoot();
       let ifaces_str = await GetAllDevices();
       if (ifaces_str == "") {
-        console.log("No interfaces found");
+        //console.log("No interfaces found");
       } else {
-        console.log("ifaces_str", ifaces_str);
+        //console.log("ifaces_str", ifaces_str);
         let temp_interfaces = ifaces_str.split(",");
         for (let i = 0; i < temp_interfaces.length; i++) {
           if (temp_interfaces[i] != "") {
@@ -164,10 +164,10 @@
           }
         }
 
-        console.log("interfaces", $interfaces.length);
+        //console.log("interfaces", $interfaces.length);
       }
     } catch (err) {
-      console.log("Error in onMount", err);
+      //console.log("Error in onMount", err);
     }
   });
 </script>

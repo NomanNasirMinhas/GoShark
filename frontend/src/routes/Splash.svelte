@@ -24,15 +24,15 @@
       try {
         isAdmin = await IsRoot();
         // isLibcapInstalled = await CheckLibcapAndInstall();
-        console.log("isAdmin", isAdmin);
-        // console.log("isLibcapInstalled", isLibcapInstalled);
+        //console.log("isAdmin", isAdmin);
+        // //console.log("isLibcapInstalled", isLibcapInstalled);
         if (isAdmin){
             setTimeout(() => {
                 navigate("/home");
             }, 3000);
         }        
       } catch (err) {
-        console.log("Error in onMount", err);
+        //console.log("Error in onMount", err);
       }
     });
   </script>

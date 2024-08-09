@@ -81,7 +81,7 @@
 
   // Ensure that we have exactly 6 bytes (12 hex characters)
   if (hexArray.length !== 6) {
-    console.log("Invalid Base64 string for MAC address conversion");
+    //console.log("Invalid Base64 string for MAC address conversion");
   }
 
   // Format the hex string as a MAC address
@@ -91,7 +91,7 @@
 }
 
   function decodeBase64(base64, format) {
-    console.log("Base64", base64);
+    //console.log("Base64", base64);
     let result;
     // Decode the base64 string to a binary string
     const binaryString = atob(base64);
@@ -133,7 +133,7 @@
 
     ws.addEventListener("message", (event) => {
       const pcapData = JSON.parse(event.data);
-      console.log("Received message from server:", pcapData);
+      //console.log("Received message from server:", pcapData);
       requests.update((old) => [...old, pcapData]);
       if (scroll_to_bottom) scrollToEnd();
     });
@@ -149,18 +149,18 @@
 
   async function toggleCapture() {
     if (capture_started) {
-      console.log("Stopping capture");
+      //console.log("Stopping capture");
       await StopCapture();
       ws.close();
       capture_started = false;
-      console.log("Capture stopped");
+      //console.log("Capture stopped");
     } else {
-      console.log("Starting capture");
+      //console.log("Starting capture");
       requests.set([]);
       connect();
       capture_started = true;
       StartCapture(capture_iface, capture_promisc, "", export_file, true);
-      console.log("Capture started");
+      //console.log("Capture started");
     }
   }
 
@@ -414,9 +414,9 @@
               //         "value": ac_current_packet[i+1]
               //     })
               //   }
-              // //   console.log("obj", obj)
+              // //   //console.log("obj", obj)
               //   ac_current_packet = obj
-              console.log("Tokens", ac_current_packet);
+              //console.log("Tokens", ac_current_packet);
               ac_hidden8 = false;
             }}
           >
