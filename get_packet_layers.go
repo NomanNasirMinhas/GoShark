@@ -1,7 +1,10 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 type FlagInt struct {
@@ -25,18 +28,18 @@ type TLSAppData struct {
 }
 
 type LayerData struct {
-	Name       string         `json:"name,omitempty"`
-	Src        string         `json:"src,omitempty"`
-	Dst        string         `json:"dst,omitempty"`
-	Protocol   string         `json:"protocol,omitempty"`
-	LayerIndex int            `json:"layer_name,omitempty"`
-	Payload    []byte         `json:"payload,omitempty"`
-	Contents   []byte         `json:"contents,omitempty"`
-	Flags_Int  []FlagInt      `json:"flags_int,omitempty"`
-	Flags_Bool []FlagBool     `json:"flags_bool,omitempty"`
-	Flags_Str  []FlagStr      `json:"flags_str,omitempty"`
-	String     string         `json:"string,omitempty"`
-	Layer      gopacket.Layer `json:"layer,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Src        string `json:"src,omitempty"`
+	Dst        string `json:"dst,omitempty"`
+	Protocol   string `json:"protocol,omitempty"`
+	LayerIndex int    `json:"layer_name,omitempty"`
+	// Payload    []byte         `json:"payload,omitempty"`
+	// Contents   []byte         `json:"contents,omitempty"`
+	// Flags_Int  []FlagInt      `json:"flags_int,omitempty"`
+	// Flags_Bool []FlagBool     `json:"flags_bool,omitempty"`
+	// Flags_Str  []FlagStr      `json:"flags_str,omitempty"`
+	String string         `json:"string,omitempty"`
+	Layer  gopacket.Layer `json:"layer,omitempty"`
 }
 
 func GetLayers(packet gopacket.Packet) ([]LayerData, string) {
@@ -49,6 +52,33 @@ func GetLayers(packet gopacket.Packet) ([]LayerData, string) {
 		if layer.LayerType().String() != "Payload" {
 			protocol_name = layer.LayerType().String()
 		}
+		switch l := layer.(type) {
+		case *layers.Ethernet:
+			layer_data.Src = strings.ToUpper(l.SrcMAC.String())
+			layer_data.Dst = strings.ToUpper(l.DstMAC.String())
+
+		case *layers.TCP:
+			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
+			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
+
+		case *layers.UDP:
+			layer_data.Src = strings.Split(l.SrcPort.String(), "(")[0]
+			layer_data.Dst = strings.Split(l.DstPort.String(), "(")[0]
+
+		case *layers.ARP:
+			layer_data.Src = strings.ToUpper(string(l.SourceHwAddress))
+			layer_data.Dst = strings.ToUpper(string(l.DstHwAddress))
+
+		case *layers.IPv4:
+			layer_data.Src = l.SrcIP.String()
+			layer_data.Dst = l.DstIP.String()
+
+		case *layers.IPv6:
+			layer_data.Src = l.SrcIP.String()
+			layer_data.Dst = l.DstIP.String()
+
+		}
+
 		packetLayers = append(packetLayers, layer_data)
 	}
 

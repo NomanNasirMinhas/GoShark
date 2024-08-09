@@ -114,7 +114,7 @@ func removeBraceAndSpaces(input string) string {
 	return result
 }
 
-func checkForYaraMatch(packet gopacket.Packet, packInfo PacketInfo) PacketInfo {
+func checkForYaraMatch(packet gopacket.Packet, packInfo PacketLayers) PacketLayers {
 	p_str := packet.String()
 	p_hex := packet.Data()
 	// check if packet string or hex match yara rules

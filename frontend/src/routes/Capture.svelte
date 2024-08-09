@@ -72,6 +72,7 @@
   onDestroy(() => ws?.close());
 
   function base64ToMacAddress(base64) {
+    try{
   // Decode the base64 string to a binary string
   const binaryString = atob(base64);
 
@@ -91,6 +92,9 @@
   const macAddress = hexArray.join(':').toUpperCase();
 
   return macAddress;
+} catch(e){
+  console.log("Mac Parse Exception", e)
+}
 }
 
   function decodeBase64(base64, format) {
@@ -136,8 +140,14 @@
 
     ws.addEventListener("message", (event) => {
       const pcapData = JSON.parse(event.data);
-      //console.log("Received message from server:", pcapData);
-      requests.update((old) => [...old, pcapData]);
+      if(pcapData.layers){
+        console.log("Got Packet Details for Packet Id: ", pcapData.packet_id)
+        ac_current_packet = pcapData
+        ac_hidden8 = false
+      } else{
+        //console.log("Received message from server:", pcapData);
+        requests.update((old) => [...old, pcapData]);
+      }
       if (scroll_to_bottom) scrollToEnd();
     });
 
@@ -210,18 +220,18 @@
         />
       </div>
       <div class="flex flex-row justify-between">
-        <div class="w-2/3 border-2 border-blue-900 p-8 bg-blue-800">
+        <div class="w-2/3 border-2 border-blue-900 p-8 bg-blue-950">
           <Accordion
-            activeClass="bg-blue-950 dark:bg-gray-800 text-blue-600 dark:text-white focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
+            activeClass="bg-blue-900 dark:bg-gray-800 text-blue-600 dark:text-white focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
             inactiveClass="text-gray-500 dark:text-gray-400 hover:bg-blue-900 dark:hover:bg-gray-800"
           >
-            {#each ac_current_packet.data_dump as l}
+            {#each ac_current_packet.layers as l}
               {#if l.name}
                 <AccordionItem>
                   <span
                     slot="header"
                     class="text-xs font-bold font-sans text-white hover:bg-blue-950"
-                    >{l.src ? l.name + ": " + l.src + "->" + l.dst : l.name}
+                    >{l.name}
                   </span>
                   {#if l.name !== "Payload"}
                     <div class="grid grid-cols-4 gap-4">
@@ -230,7 +240,7 @@
                           <p class="text-xs text-white mr-8">
                             <span class="font-bold font-serif">{key}: </span>
                             <span class="font-thin font-serif"
-                              >{key === "SrcMAC" || key === "DstMAC" ? base64ToMacAddress(l.layer[key]) : l.layer[key]}</span
+                              >{base64ToMacAddress(l.layer[key]) ? base64ToMacAddress(l.layer[key]) : l.layer[key]}</span
                             >
                           </p>
                         {/if}
@@ -416,17 +426,13 @@
             on:mouseleave={() => {
               active_row_idx = null;
             }}
-            on:click={() => {
-              is_loading = true
+            on:click={() => {              
               ac_current_packet = item;            
-              ws.send(JSON.stringify({
-                "Type": "pack_info",
-                "Msg": item.timestamp
-              }))
-              ac_hidden8 = false;
+              ws.send(`pack-info_${item.packet_id}`)
+              // ac_hidden8 = false;
             }}
           >
-            <td>{idx + 1}</td>            
+            <td>{item.packet_id}</td>            
               <td>{item.timestamp}</td>
               <td>{item.length || "N/A"}</td>
             <td>{item.source}</td>            
@@ -441,7 +447,7 @@
             </td>
 
             <td>
-              {item.src_port || "N/A"} -> {item.dst_port || "N/A"}
+              {item.src_port ? item.src_port + " -> " + item.dst_port : "N/A"}
             </td>
           </tr>
         {/each}

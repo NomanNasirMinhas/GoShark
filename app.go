@@ -54,6 +54,7 @@ var capturePackets []gopacket.Packet
 var mu sync.Mutex
 var protocols_list map[string]map[int]string
 var yaraRules []*ast.Rule
+var pack_info []PacketLayers
 
 type WsMessage struct {
 	Type string
@@ -83,8 +84,28 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		msg_token := strings.Split(string(msg), "_")
-		fmt.Printf("%s\n", msg_token)
+		go func() {
+			msg_token := strings.Split(string(msg), "_")
+			fmt.Printf("%s\n", msg_token)
+			if msg_token[0] == "pack-info" {
+				id, err := strconv.ParseInt(msg_token[1], 10, 64)
+				if err == nil {
+					fmt.Printf("Getting packet details of %d", id)
+					for _, p := range pack_info {
+						if p.PacketID == id {
+							jsonData, err := json.Marshal(p)
+							if err == nil {
+								packetStr := string(jsonData)
+								println(packetStr)
+								broadcastMessage(packetStr)
+							}
+						}
+					}
+					// Convert to JSON
+
+				}
+			}
+		}()
 
 	}
 
@@ -101,6 +122,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 // Function to broadcast messages to all connected clients
 func broadcastMessage(message string) {
+	print(".")
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -153,38 +175,50 @@ type AlertMessage struct {
 }
 
 // PacketInfo holds the decoded information from the packet
-type PacketInfo struct {
+
+type PacketLayers struct {
+	PacketID      int64          `json:"packet_id,omitempty"`
 	Timestamp     int64          `json:"timestamp,omitempty"`
-	CaptureLength int            `json:"cap_length,omitempty"`
-	Length        int            `json:"length,omitempty"`
-	ICMPv4        *layers.ICMPv4 `json:"icmpv4,omitempty"`
-	ICMPv6        *layers.ICMPv6 `json:"icmpv6,omitempty"`
-	Payload       []byte         `json:"payload,omitempty"`
-	DecodeError   error          `json:"decode_error,omitempty"`
-	Source        string         `json:"source,omitempty"`
-	Destination   string         `json:"destination,omitempty"`
-	SrcPort       string         `json:"src_port,omitempty"`
-	DstPort       string         `json:"dst_port,omitempty"`
-	AppProtocol   string         `json:"app_protocol,omitempty"`
-	Color         string         `json:"color,omitempty"`
 	SuricataAlert []AlertMessage `json:"suricata_alert,omitempty"`
 	YaraAlert     []AlertMessage `json:"yara_alert,omitempty"`
 	HasAlert      bool           `json:"has_alert,omitempty"`
-	DataDump      []LayerData    `json:"data_dump,omitempty"`
+	Layers        []LayerData    `json:"layers,omitempty"`
 	PacketString  string         `json:"packet_string,omitempty"`
 	PacketHex     []byte         `json:"packet_hex,omitempty"`
-	Protocol      string         `json:"protocol,omitempty"`
 }
 
-// PacketToJSON conver1ts a gopacket.Packet to a JSON string
-func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
-	var packetInfo PacketInfo
+type PacketInfo struct {
+	PacketID      int64  `json:"packet_id,omitempty"`
+	Timestamp     int64  `json:"timestamp,omitempty"`
+	CaptureLength int    `json:"cap_length,omitempty"`
+	Length        int    `json:"length,omitempty"`
+	Source        string `json:"source,omitempty"`
+	Destination   string `json:"destination,omitempty"`
+	SrcPort       string `json:"src_port,omitempty"`
+	DstPort       string `json:"dst_port,omitempty"`
+	AppProtocol   string `json:"app_protocol,omitempty"`
+	Color         string `json:"color,omitempty"`
+	HasAlert      bool   `json:"has_alert,omitempty"`
+	Protocol      string `json:"protocol,omitempty"`
+	PacketString  string `json:"packet_string,omitempty"`
+}
 
-	_, packetInfo.Protocol = GetLayers(packet)
+var Max_Pack_ID = 0
+
+// PacketToJSON conver1ts a gopacket.Packet to a JSON string
+func PacketToJSON(packet gopacket.Packet) (PacketLayers, error) {
+	var packetInfo PacketInfo
+	var packetDetails PacketLayers
+
+	Max_Pack_ID = Max_Pack_ID + 1
+	packetInfo.PacketID = int64(Max_Pack_ID)
+	packetDetails.PacketID = int64(Max_Pack_ID)
+	packetDetails.Layers, packetInfo.Protocol = GetLayers(packet)
 	packetInfo.Timestamp = packet.Metadata().Timestamp.Unix()
 	// packetInfo.DataDump = packet.Dump()
+	packetDetails.PacketString = packet.String()
 	packetInfo.PacketString = packet.String()
-	packetInfo.PacketHex = packet.Data()
+	packetDetails.PacketHex = packet.Data()
 	// Length is the size of the original packet.  Should always be >=
 	// CaptureLength.
 	packetInfo.Length = packet.Metadata().Length
@@ -263,22 +297,34 @@ func PacketToJSON(packet gopacket.Packet) (string, PacketInfo, error) {
 		}
 	}
 
-	if len(packetInfo.AppProtocol) == 0 {
-		packetInfo.AppProtocol = packetInfo.Protocol
+	if arpLayer := packet.Layer(layers.LayerTypeDNS); arpLayer != nil {
+		if arpPacket, ok := arpLayer.(*layers.ARP); ok {
+			packetInfo.SrcPort = string(arpPacket.DstHwAddress)
+			packetInfo.DstPort = string(arpPacket.DstHwAddress)
+
+			fmt.Printf("ARP %s and %s\n", packetInfo.SrcPort, packetInfo.DstPort)
+		}
 	}
 
-	// Include any error occurred during decoding
-	if err_layer := packet.ErrorLayer(); err_layer != nil {
-		packetInfo.DecodeError = err_layer.Error()
+	if ICMPv6NeighborSolicitationLayer := packet.Layer(layers.LayerTypeICMPv6NeighborSolicitation); ICMPv6NeighborSolicitationLayer != nil {
+		if ICMPv6NeighborSolicitationPacket, ok := ICMPv6NeighborSolicitationLayer.(*layers.ARP); ok {
+			packetInfo.SrcPort = string(ICMPv6NeighborSolicitationPacket.SourceHwAddress)
+			packetInfo.DstPort = string(ICMPv6NeighborSolicitationPacket.DstHwAddress)
+			fmt.Printf("ICMPv6NeighborSolicitationLayer %s and %s\n", packetInfo.SrcPort, packetInfo.DstPort)
+		}
+	}
+
+	if len(packetInfo.AppProtocol) == 0 {
+		packetInfo.AppProtocol = packetInfo.Protocol
 	}
 
 	// Convert to JSON
 	jsonData, err := json.Marshal(packetInfo)
 	if err != nil {
-		return "", packetInfo, err
+		return packetDetails, err
 	}
-
-	return string(jsonData), packetInfo, nil
+	broadcastMessage(string(jsonData))
+	return packetDetails, nil
 }
 
 func (a *App) IsRoot() bool {
@@ -405,27 +451,19 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 			handlePacketForSaving(packet)
 		}
 
-		packetStr, packStruct, _ := PacketToJSON(packet)
+		packLayers, _ := PacketToJSON(packet)
 
-		if len(suricataRules) > 0 {
-			packStruct = checkforSuricataAlert(packStruct)
-		}
+		go func() {
 
-		if len(yaraRules) > 0 {
-			packStruct = checkForYaraMatch(packet, packStruct)
-		}
+			pack_info = append(pack_info, packLayers)
+			if len(suricataRules) > 0 {
+				packLayers = checkforSuricataAlert(packLayers)
+			}
 
-		// Convert to JSON
-		jsonData, err := json.Marshal(packStruct)
-		if err == nil {
-			packetStr = string(jsonData)
-		}
-
-		if err == nil {
-			broadcastMessage(packetStr)
-		} else {
-			println("Error Parsing Packet", err)
-		}
+			if len(yaraRules) > 0 {
+				packLayers = checkForYaraMatch(packet, packLayers)
+			}
+		}()
 	}
 }
 
@@ -496,7 +534,7 @@ func (a *App) ParseSuricataRules(filename string, data []byte) bool {
 	}
 }
 
-func checkforSuricataAlert(packInfo PacketInfo) PacketInfo {
+func checkforSuricataAlert(packInfo PacketLayers) PacketLayers {
 	for _, rule := range suricataRules {
 		if (rule.Action() == "alert" || rule.Action() == "drop") && rule.Enabled {
 			// fmt.Printf("Rule -> %s, %s, %s\n\n", rule.Action(), rule.Header(), rule.Enabled)
@@ -546,40 +584,39 @@ func parseHeader(header_src, header_dst string) (string, string, string, string,
 }
 
 // Helper function to check the protocol
-func checkProtocol(packet PacketInfo, protocol string) bool {
+func checkProtocol(packet PacketLayers, protocol string) bool {
 
-	p := packet.AppProtocol
-	p = strings.ToLower(p)
+	for _, layer := range packet.Layers {
+		if strings.ToLower(layer.Protocol) == strings.ToLower(protocol) {
+			return true
+		}
+	}
 	// println("Packet Protocol", p)
-	return p == strings.ToLower(protocol)
+	return false
 }
 
 // Helper function to check source and destination IP and ports
-func checkIPandPort(packet PacketInfo, srcIP, srcPort, dstIP, dstPort string) bool {
+func checkIPandPort(packet PacketLayers, srcIP, srcPort, dstIP, dstPort string) bool {
 
-	// fmt.Printf("%s, %s, %s, %s, %s, %s, %s, %s\n", packet.SourceIP4, srcIP, packet.DestinationIP4, dstIP, packet.SrcPort, srcPort, packet.DstPort, dstPort)
+	for _, v := range packet.Layers {
+		// Check IP addresses
+		if srcIP != "any" && v.Src != srcIP {
+			return false
+		}
+		if dstIP != "any" && v.Dst != dstIP {
+			return false
+		}
 
-	// if packet.SourceIP4 == nil || packet.DestinationIP4 == nil || packet.SrcPort == nil || packet.DstPort == nil {
-	// 	return false
-	// }
-
-	// Check IP addresses
-	if srcIP != "any" && packet.Source != srcIP {
-		return false
+		// Check ports
+		if srcPort != "any" && v.Src != srcPort {
+			return false
+		}
+		if dstPort != "any" && v.Dst != dstPort {
+			return false
+		}
+		return true
 	}
-	if dstIP != "any" && packet.Destination != dstIP {
-		return false
-	}
-
-	// Check ports
-	if srcPort != "any" && packet.SrcPort != srcPort {
-		return false
-	}
-	if dstPort != "any" && packet.DstPort != dstPort {
-		return false
-	}
-
-	return true
+	return false
 }
 
 func (a *App) GetPacketStream() []gopacket.Packet {
