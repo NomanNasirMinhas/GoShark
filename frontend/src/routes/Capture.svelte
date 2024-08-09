@@ -419,6 +419,10 @@
             on:click={() => {
               is_loading = true
               ac_current_packet = item;            
+              ws.send(JSON.stringify({
+                "Type": "pack_info",
+                "Msg": item.timestamp
+              }))
               ac_hidden8 = false;
             }}
           >

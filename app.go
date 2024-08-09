@@ -55,6 +55,11 @@ var mu sync.Mutex
 var protocols_list map[string]map[int]string
 var yaraRules []*ast.Rule
 
+type WsMessage struct {
+	Type string
+	Msg  string
+}
+
 // Handler function for WebSocket connection
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	// Upgrade the HTTP request to a WebSocket connection
@@ -72,12 +77,15 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Listen for messages from the client
 	for {
-		msg_type, msg, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Println("Client disconnected:", err)
 			break
 		}
-		fmt.Printf("%d, %s, %s\n", msg_type, msg, err)
+
+		msg_token := strings.Split(string(msg), "_")
+		fmt.Printf("%s\n", msg_token)
+
 	}
 
 	mu.Lock()
