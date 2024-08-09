@@ -446,7 +446,7 @@
             </td>
 
             <td>
-              {item.src_port || "N/A"} -> {item.dst_port || "N/A"}
+              {item.data_dump[2].layer.SrcPort || "N/A"} -> {item.data_dump[2].layer.DstPort || "N/A"}
             </td>
 
             <td>{item.length || "N/A"}</td>
