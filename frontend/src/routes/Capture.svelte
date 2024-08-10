@@ -107,7 +107,7 @@
           );
           ac_current_packet = pcapData;
           // console.log("All Alerts", $alert_details)
-          // console.log("Alert Details", $alert_details[pcapData.packet_id])
+          console.log("Alert Details", $alert_details[pcapData.packet_id])
           ac_current_packet_alert = $alert_details[pcapData.packet_id]
           // is_loading = false;
           ac_hidden8 = false;

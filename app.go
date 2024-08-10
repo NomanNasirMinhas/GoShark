@@ -578,6 +578,7 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 
 		pack_info = append(pack_info, packLayers)
 		if len(suricataRules) > 0 {
+			// println("Checking for Suricata")
 			packLayers = checkforSuricataAlert(packLayers)
 		}
 
@@ -685,7 +686,7 @@ func checkforSuricataAlert(packInfo PacketLayers) PacketLayers {
 					alert.AlertMessage = rule.Msg()
 					alert.Timestamp = packInfo.Timestamp
 					alert.AlertType = 1
-					packInfo.YaraAlert = append(packInfo.YaraAlert, alert)
+					packInfo.SuricataAlert = append(packInfo.SuricataAlert, alert)
 					if !packInfo.HasAlert {
 						packInfo.HasAlert = true
 					}
@@ -712,11 +713,21 @@ func parseHeader(header_src, header_dst string) (string, string, string, string,
 	return protocol, srcIP, srcPort, dstIP, dstPort
 }
 
+func str_slice_contains(slice []string, element string) bool {
+	for _, v := range slice {
+		if strings.ToLower(v) == strings.ToLower(element) {
+			return true
+		}
+	}
+	return false
+}
+
 // Helper function to check the protocol
 func checkProtocol(packet PacketLayers, protocol string) bool {
 
 	for _, layer := range packet.Layers {
-		if strings.ToLower(layer.Protocol) == strings.ToLower(protocol) {
+		// fmt.Println(strings.ToLower(layer.Protocol), strings.ToLower(protocol))
+		if str_slice_contains(layer.Protocol, protocol) {
 			return true
 		}
 	}
@@ -726,7 +737,7 @@ func checkProtocol(packet PacketLayers, protocol string) bool {
 
 // Helper function to check source and destination IP and ports
 func checkIPandPort(packet PacketLayers, srcIP, srcPort, dstIP, dstPort string) bool {
-
+	println(srcIP, srcPort, dstIP, dstPort)
 	for _, v := range packet.Layers {
 		// Check IP addresses
 		if srcIP != "any" && v.Src != srcIP {

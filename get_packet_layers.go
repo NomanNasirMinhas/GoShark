@@ -28,11 +28,11 @@ type TLSAppData struct {
 }
 
 type LayerData struct {
-	Name       string `json:"name,omitempty"`
-	Src        string `json:"src,omitempty"`
-	Dst        string `json:"dst,omitempty"`
-	Protocol   string `json:"protocol,omitempty"`
-	LayerIndex int    `json:"layer_name,omitempty"`
+	Name       string   `json:"name,omitempty"`
+	Src        string   `json:"src,omitempty"`
+	Dst        string   `json:"dst,omitempty"`
+	Protocol   []string `json:"protocol,omitempty"`
+	LayerIndex int      `json:"layer_name,omitempty"`
 	// Payload    []byte         `json:"payload,omitempty"`
 	// Contents   []byte         `json:"contents,omitempty"`
 	// Flags_Int  []FlagInt      `json:"flags_int,omitempty"`
@@ -49,6 +49,7 @@ func GetLayers(packet gopacket.Packet) ([]LayerData, string) {
 		var layer_data LayerData
 		layer_data.Layer = layer
 		layer_data.Name = layer.LayerType().String()
+		layer_data.Protocol = append(layer_data.Protocol, layer.LayerType().String())
 		if layer.LayerType().String() != "Payload" {
 			protocol_name = layer.LayerType().String()
 		}
@@ -76,6 +77,9 @@ func GetLayers(packet gopacket.Packet) ([]LayerData, string) {
 		case *layers.IPv6:
 			layer_data.Src = l.SrcIP.String()
 			layer_data.Dst = l.DstIP.String()
+
+		case *layers.TLS:
+			layer_data.Protocol = append(layer_data.Protocol, l.LayerType().String())
 
 		}
 
