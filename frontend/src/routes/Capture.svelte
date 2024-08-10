@@ -50,7 +50,7 @@
 
   const requests = writable([]);
   const alerts_id = writable([]);
-  const alert_details = writable({});
+  const packet_details = writable({});
   let scroll_to_bottom = true;
   let show_with_alerts = false;
   let ac_hidden8 = true;
@@ -65,7 +65,7 @@
 
   let packetCapture_ws;
   let packetDetails_ws;
-  let alert_ws;
+  // let alert_ws;
 
   let is_loading = false;
   let toast_message = "";
@@ -100,17 +100,27 @@
       packetDetails_ws.addEventListener("message", (event) => {
         // if (event.data.startsWith("AlertMsg_")) {          
         // } else {
-          const pcapData = JSON.parse(event.data);
-          console.log(
-            "Got Packet Details s for Packet Id: ",
-            pcapData
-          );
-          ac_current_packet = pcapData;
-          // console.log("All Alerts", $alert_details)
-          console.log("Alert Details", $alert_details[pcapData.packet_id])
-          ac_current_packet_alert = $alert_details[pcapData.packet_id]
+          let data = JSON.parse(event.data)          
+          // console.log(
+          //   "Got Packet Details for Packet Id: ",
+          //   data
+          // );
+          let packet_id = data.packet_id                                  
+          if (data.has_alert === true){
+                alerts_id.update((v)=>{
+                  return [...v, parseInt(packet_id)]
+                })            
+          }
+              packet_details.update((v)=>{
+                v[packet_id] = data
+                return { ...v, v };                
+              })
+          // ac_current_packet = pcapData;
+          // console.log("All Alerts", $packet_details)
+          // console.log("Alert Details", $packet_details[pcapData.packet_id])
+          // ac_current_packet_alert = $packet_details[pcapData.packet_id]
           // is_loading = false;
-          ac_hidden8 = false;
+          // ac_hidden8 = false;
           // if (scroll_to_bottom) scrollToEnd();
         // }
       });
@@ -126,8 +136,20 @@
   onDestroy(() => {
     packetCapture_ws?.close();
     packetDetails_ws?.close();
-    alert_ws?.close();
+    // alert_ws?.close();
   });
+
+  function checkType(variable) {
+    if (Array.isArray(variable)) {
+      console.log("Type Var", variable)
+      return 1;
+    } else if (variable !== null && typeof variable === 'object') {
+      console.log("Type Var", variable)
+        return 2;
+    } else {
+        return 0;
+    }
+}
 
   function base64ToMacAddress(base64) {
     try {
@@ -196,7 +218,7 @@
   function connect() {
     try {
       packetCapture_ws = new WebSocket(WS1_URL);
-      alert_ws = new WebSocket(WS3_URL);
+      // alert_ws = new WebSocket(WS3_URL);
 
       packetCapture_ws.addEventListener("message", (event) => {
         const pcapData = JSON.parse(event.data);
@@ -213,30 +235,30 @@
       );
       
 
-      alert_ws.addEventListener("message", (event) => {
-        try{
-          let data = JSON.parse(event.data)
-          // console.log("Alert Message", data)
-          let packet_id = data.packet_id                                  
-              alerts_id.update((v)=>{
-                return [...v, parseInt(packet_id)]
-              })            
-              alert_details.update((v)=>{
-                v[packet_id] = data
-                return { ...v, v };                
-              })
+      // alert_ws.addEventListener("message", (event) => {
+      //   try{
+      //     let data = JSON.parse(event.data)
+      //     // console.log("Alert Message", data)
+      //     let packet_id = data.packet_id                                  
+      //         alerts_id.update((v)=>{
+      //           return [...v, parseInt(packet_id)]
+      //         })            
+      //         packet_details.update((v)=>{
+      //           v[packet_id] = data
+      //           return { ...v, v };                
+      //         })
 
-        } catch(e){
-          console.log("Ex", e)
-        }
-      });
+      //   } catch(e){
+      //     console.log("Ex", e)
+      //   }
+      // });
 
-      alert_ws.addEventListener("error", (err) =>
-        console.log("WebSocket error:", err)
-      );
-      alert_ws.addEventListener("close", () =>
-        console.log("WebSocket connection closed")
-      );
+      // alert_ws.addEventListener("error", (err) =>
+      //   console.log("WebSocket error:", err)
+      // );
+      // alert_ws.addEventListener("close", () =>
+      //   console.log("WebSocket connection closed")
+      // );
 
 
       StartCapture(capture_iface, capture_promisc, "", export_file, true);
@@ -328,13 +350,39 @@
                   {#if l.name !== "Payload"}
                     <div class="grid grid-cols-4 gap-4">
                       {#each Object.keys(l.layer) as key}
-                        {#if key != "Contents" && key != "Options" && key != "Payload" && l.layer[key] != null}
+                        {#if key != "Contents" && key != "Payload" && l.layer[key] != null && checkType(l.layer[key]) === 0}                      
                           <p class="text-xs text-white mr-8">
                             <span class="font-bold font-serif">{key}: </span>
                             <span class="font-thin font-serif"
                               >{base64ToMacAddress(l.layer[key])
                                 ? base64ToMacAddress(l.layer[key])
                                 : l.layer[key]}</span
+                            >
+                          </p>
+                        {/if}
+                      {/each}
+                      </div>
+                      <div class="grid grid-cols-1 gap-4 mt-8 break-words">
+                      {#each Object.keys(l.layer) as key}
+                        {#if key != "Contents" && key != "Payload" && l.layer[key] != null && checkType(l.layer[key]) === 1}                      
+                        {#each l.layer[key] as arr}
+                        <p class="text-xs text-white mr-8 break-words">
+                          <span class="font-bold font-serif break-words">{key}: </span>
+                          <span class="font-thin font-serif break-words"
+                            >{JSON.stringify(l.layer[key])}</span
+                          >
+                        </p>                          
+                        {/each}
+                        {/if}
+                      {/each}
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mt-8 break-words">
+                      {#each Object.keys(l.layer) as key}
+                        {#if key != "Contents" && key != "Payload" && l.layer[key] != null && checkType(l.layer[key]) === 2}                      
+                          <p class="text-xs text-white mr-8 break-words">
+                            <span class="font-bold font-serif break-words">{key}: </span>
+                            <span class="font-thin font-serif break-words"
+                              >{JSON.stringify(l.layer[key])}</span
                             >
                           </p>
                         {/if}
@@ -396,13 +444,13 @@
         </div>
 
         <div class="w-1/3 ml-8 border-2 border-blue-900 p-8 bg-teal-800">
-          {#if ac_current_packet_alert.has_alert}
-            {#if ac_current_packet_alert.suricata_alert && ac_current_packet_alert.suricata_alert.length > 0}
+          {#if ac_current_packet && ac_current_packet.has_alert}
+            {#if ac_current_packet.suricata_alert && ac_current_packet.suricata_alert.length > 0}
               <p class="text-sm font-bold font-mono text-white mb-4">
                 Suricata Rules
               </p>
               <ol>
-                {#each ac_current_packet_alert.suricata_alert as sa}
+                {#each ac_current_packet.suricata_alert as sa}
                 <li class="text-sm text-left font-mono text-white mb-1">
                   {sa.alert_msg}
                 </li>
@@ -410,12 +458,12 @@
               </ol>
             {/if}
 
-            {#if ac_current_packet_alert.yara_alert && ac_current_packet_alert.yara_alert.length > 0}
+            {#if ac_current_packet.yara_alert && ac_current_packet.yara_alert.length > 0}
               <p class="text-sm font-bold font-mono text-white mb-4 mt-8">
                 Yara Rules
               </p>
               <ol>
-                {#each ac_current_packet_alert.yara_alert as ya}
+                {#each ac_current_packet.yara_alert as ya}
                   <li class="text-sm text-left font-mono text-white mb-1">
                     {ya.alert_msg}
                   </li>
@@ -529,11 +577,13 @@
               active_row_idx = null;
             }}
             on:click={() => {
-              // is_loading = true
+              is_loading = true
               console.log("Clicked");
-              // ac_current_packet = item;
-              packetDetails_ws.send(`pack-info_${item.packet_id}`);
-              // ac_hidden8 = false;
+              ac_current_packet = $packet_details[item.packet_id]
+              console.log("Selected", ac_current_packet)
+              // packetDetails_ws.send(`pack-info_${item.packet_id}`);
+              is_loading = false;
+              ac_hidden8 = false;
             }}
           >
             <td>{item.packet_id}</td>

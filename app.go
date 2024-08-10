@@ -158,40 +158,40 @@ func ws2Handler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handler function for WebSocket connection
-func ws3Handler(w http.ResponseWriter, r *http.Request) {
-	// Upgrade the HTTP request to a WebSocket connection
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		fmt.Println("Error upgrading:", err)
-		return
-	}
-	fmt.Println("Client connected -> ", conn.RemoteAddr())
-	defer conn.Close()
+// func ws3Handler(w http.ResponseWriter, r *http.Request) {
+// 	// Upgrade the HTTP request to a WebSocket connection
+// 	conn, err := upgrader.Upgrade(w, r, nil)
+// 	if err != nil {
+// 		fmt.Println("Error upgrading:", err)
+// 		return
+// 	}
+// 	fmt.Println("Client connected -> ", conn.RemoteAddr())
+// 	defer conn.Close()
 
-	mu.Lock()
-	clients3 = append(clients3, conn)
-	mu.Unlock()
+// 	mu.Lock()
+// 	clients3 = append(clients3, conn)
+// 	mu.Unlock()
 
-	// Listen for messages from the client
-	for {
-		_, _, err := conn.ReadMessage()
-		if err != nil {
-			fmt.Println("Client disconnected:", err)
-			break
-		}
+// 	// Listen for messages from the client
+// 	for {
+// 		_, _, err := conn.ReadMessage()
+// 		if err != nil {
+// 			fmt.Println("Client disconnected:", err)
+// 			break
+// 		}
 
-	}
+// 	}
 
-	mu.Lock()
-	// Remove the client from the list
-	for i, c := range clients3 {
-		if c == conn {
-			clients3 = append(clients3[:i], clients3[i+1:]...)
-			break
-		}
-	}
-	mu.Unlock()
-}
+// 	mu.Lock()
+// 	// Remove the client from the list
+// 	for i, c := range clients3 {
+// 		if c == conn {
+// 			clients3 = append(clients3[:i], clients3[i+1:]...)
+// 			break
+// 		}
+// 	}
+// 	mu.Unlock()
+// }
 
 // Function to broadcast messages to all connected clients
 func broadcastMessage1(message string) {
@@ -208,7 +208,7 @@ func broadcastMessage1(message string) {
 
 // Function to broadcast messages to all connected clients
 func broadcastMessage2(message string) {
-	print("sending packet details message\n")
+	// print("sending packet details message\n")
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -219,17 +219,17 @@ func broadcastMessage2(message string) {
 	}
 }
 
-func broadcastMessage3(message string) {
-	// print(message + "\n")
-	mu.Lock()
-	defer mu.Unlock()
+// func broadcastMessage3(message string) {
+// 	// print(message + "\n")
+// 	mu.Lock()
+// 	defer mu.Unlock()
 
-	for _, conn := range clients3 {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
-			fmt.Println("Error sending message:", err)
-		}
-	}
-}
+// 	for _, conn := range clients3 {
+// 		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+// 			fmt.Println("Error sending message:", err)
+// 		}
+// 	}
+// }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
@@ -261,15 +261,15 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}()
 
-	http.HandleFunc("/ws3", ws3Handler)
-	go func() {
-		fmt.Println("WebSocket server starting on :4446")
-		if err := http.ListenAndServe("0.0.0.0:4446", nil); err != nil {
-			fmt.Println("Error starting server:", err)
-		} else {
-			fmt.Println("Server running on 4445 port")
-		}
-	}()
+	// http.HandleFunc("/ws3", ws3Handler)
+	// go func() {
+	// 	fmt.Println("WebSocket server starting on :4446")
+	// 	if err := http.ListenAndServe("0.0.0.0:4446", nil); err != nil {
+	// 		fmt.Println("Error starting server:", err)
+	// 	} else {
+	// 		fmt.Println("Server running on 4445 port")
+	// 	}
+	// }()
 
 	// Load protocols from CSV
 	var err error
@@ -586,13 +586,13 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 			packLayers = checkForYaraMatch(packet, packLayers)
 		}
 
-		if packLayers.HasAlert {
-			jsonData, err := json.Marshal(packLayers)
-			if err == nil {
-				alert_msg := string(jsonData)
-				broadcastMessage3(alert_msg)
-			}
+		// if packLayers.HasAlert {
+		jsonData, err := json.Marshal(packLayers)
+		if err == nil {
+			alert_msg := string(jsonData)
+			broadcastMessage2(alert_msg)
 		}
+		// }
 		// }()
 	}
 }
@@ -681,7 +681,7 @@ func checkforSuricataAlert(packInfo PacketLayers) PacketLayers {
 				// println("Protocols matched")
 				// Check source and destination IP and ports
 				if checkIPandPort(packInfo, srcIP, srcPort, dstIP, dstPort) {
-					fmt.Printf("Packet matches rule: %s\n", rule.Msg())
+					// fmt.Printf("Packet matches rule: %s\n", rule.Msg())
 					var alert AlertMessage
 					alert.AlertMessage = rule.Msg()
 					alert.Timestamp = packInfo.Timestamp
