@@ -737,7 +737,7 @@ func checkProtocol(packet PacketLayers, protocol string) bool {
 
 // Helper function to check source and destination IP and ports
 func checkIPandPort(packet PacketLayers, srcIP, srcPort, dstIP, dstPort string) bool {
-	println(srcIP, srcPort, dstIP, dstPort)
+	// println(srcIP, srcPort, dstIP, dstPort)
 	for _, v := range packet.Layers {
 		// Check IP addresses
 		if srcIP != "any" && v.Src != srcIP {
