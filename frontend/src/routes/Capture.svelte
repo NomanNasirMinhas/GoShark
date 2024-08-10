@@ -49,7 +49,7 @@
   const ac_transitionParamsBottom = { y: 320, duration: 200, easing: sineIn };
 
   const requests = writable([]);
-  // const alerts = writable([]);
+  const alerts = writable([]);
   let scroll_to_bottom = true;
   let show_with_alerts = false;
   let ac_hidden8 = true;
@@ -60,20 +60,31 @@
   let active_row_color = "#063970";
   let active_row_idx;
 
-  let ws1;
-  let ws2;
-  let ws3;
+  let packetCapture_ws;
+  let packetDetails_ws;
+  let alert_ws;
 
   let is_loading = false;
   let toast_message = "";
   let toast_color = "";
 
   // Reactive statements
-  $: filteredItems = $requests.filter((item) =>
-    JSON.stringify(item.packet_string)
+  $: filteredItems = $requests.filter((item) =>{
+    try{
+    if(show_with_alerts){
+      // console.log("Alerts", $alerts.includes(item.packet_id))
+      return $alerts.includes(item.packet_id) && JSON.stringify(item.packet_string)
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
-  );
+    } else{
+      return JSON.stringify(item.packet_string)
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
+    }} catch(e){
+      console.log("Exception", e)
+      return item;
+    }
+  });
   $: capture_iface = $userStore.capture_iface;
   $: capture_promisc = $userStore.capture_promisc;
 
@@ -81,9 +92,9 @@
   onMount(() => {
     try {
       connect();
-      ws2 = new WebSocket(WS2_URL);
+      packetDetails_ws = new WebSocket(WS2_URL);
 
-      ws2.addEventListener("message", (event) => {
+      packetDetails_ws.addEventListener("message", (event) => {
         // if (event.data.startsWith("AlertMsg_")) {          
         // } else {
           const pcapData = JSON.parse(event.data);
@@ -98,18 +109,18 @@
         // }
       });
 
-      ws2.addEventListener("error", (err) =>
+      packetDetails_ws.addEventListener("error", (err) =>
         console.log("WebSocket error:", err)
       );
-      ws2.addEventListener("close", () =>
+      packetDetails_ws.addEventListener("close", () =>
         console.log("WebSocket connection closed")
       );
     } catch (e) {}
   });
   onDestroy(() => {
-    ws1?.close();
-    ws2?.close();
-    ws3?.close();
+    packetCapture_ws?.close();
+    packetDetails_ws?.close();
+    alert_ws?.close();
   });
 
   function base64ToMacAddress(base64) {
@@ -178,50 +189,40 @@
 
   function connect() {
     try {
-      ws1 = new WebSocket(WS1_URL);
-      ws3 = new WebSocket(WS3_URL);
+      packetCapture_ws = new WebSocket(WS1_URL);
+      alert_ws = new WebSocket(WS3_URL);
 
-      ws1.addEventListener("message", (event) => {
+      packetCapture_ws.addEventListener("message", (event) => {
         const pcapData = JSON.parse(event.data);
         // console.log("Received message from server:", pcapData);
         requests.update((old) => [...old, pcapData]);
         if (scroll_to_bottom) scrollToEnd();
       });
 
-      ws1.addEventListener("error", (err) =>
+      packetCapture_ws.addEventListener("error", (err) =>
         console.log("WebSocket error:", err)
       );
-      ws1.addEventListener("close", () =>
+      packetCapture_ws.addEventListener("close", () =>
         console.log("WebSocket connection closed")
       );
       
 
-      ws3.addEventListener("message", (event) => {
-        // console.log("Alert Message", event.data);
-          let data = event.data.split("_");
-          let packet_id = data[1];
-          let has_alert = data[2] === "true";
-          requests.update((requestsList) => {
-            return requestsList.map((element) => {
-              if (element.packet_id == packet_id) {
-                console.log("Packet ID ", packet_id, " has match ", has_alert)
-                return {
-                  ...element,
-                  has_alert: has_alert,
-                };
-              }
-              return element;
-            });
-          });
-        // console.log("Received message from server:", pcapData);
-        // requests.update((old) => [...old, pcapData]);
-        // if (scroll_to_bottom) scrollToEnd();
+      alert_ws.addEventListener("message", (event) => {
+        let data = event.data.split("_");
+        let packet_id = data[1];
+        let has_alert = data[2] === "true";
+        if (has_alert){
+            console.log("Alert Message", event.data);
+            alerts.update((v)=>{
+              return [...v, parseInt(packet_id)]
+            })
+          }                  
       });
 
-      ws3.addEventListener("error", (err) =>
+      alert_ws.addEventListener("error", (err) =>
         console.log("WebSocket error:", err)
       );
-      ws3.addEventListener("close", () =>
+      alert_ws.addEventListener("close", () =>
         console.log("WebSocket connection closed")
       );
 
@@ -242,8 +243,8 @@
         is_loading = false;
       }
 
-      ws1.close();
-      // ws2.close();
+      packetCapture_ws.close();
+      // packetDetails_ws.close();
       capture_started = false;
       //console.log("Capture stopped");
     } else {
@@ -446,7 +447,7 @@
           checked={show_with_alerts}
           on:click={() => {
             show_with_alerts = !show_with_alerts;
-            show_with_alerts ? (searchTerm = "has_alert") : (searchTerm = "");
+            // show_with_alerts ? (searchTerm = "has_alert") : (searchTerm = "");
           }}>Alerts</Checkbox
         >
         <Checkbox
@@ -515,7 +516,7 @@
               // is_loading = true
               console.log("Clicked");
               // ac_current_packet = item;
-              ws2.send(`pack-info_${item.packet_id}`);
+              packetDetails_ws.send(`pack-info_${item.packet_id}`);
               // ac_hidden8 = false;
             }}
           >
