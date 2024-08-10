@@ -586,8 +586,11 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 		}
 
 		if packLayers.HasAlert {
-			alert_msg := "AlertMsg_" + strconv.FormatInt(packLayers.PacketID, 10) + "_" + strconv.FormatBool(packLayers.HasAlert)
-			broadcastMessage3(alert_msg)
+			jsonData, err := json.Marshal(packLayers)
+			if err == nil {
+				alert_msg := string(jsonData)
+				broadcastMessage3(alert_msg)
+			}
 		}
 		// }()
 	}

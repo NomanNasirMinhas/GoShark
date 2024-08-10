@@ -49,11 +49,14 @@
   const ac_transitionParamsBottom = { y: 320, duration: 200, easing: sineIn };
 
   const requests = writable([]);
-  const alerts = writable([]);
+  const alerts_id = writable([]);
+  const alert_details = writable({});
   let scroll_to_bottom = true;
   let show_with_alerts = false;
   let ac_hidden8 = true;
   let ac_current_packet = null;
+  let ac_current_packet_alert = null;
+
   let capture_started = false;
   let export_file = $userStore.capture_export;
   let searchTerm = "";
@@ -72,8 +75,8 @@
   $: filteredItems = $requests.filter((item) =>{
     try{
     if(show_with_alerts){
-      // console.log("Alerts", $alerts.includes(item.packet_id))
-      return $alerts.includes(item.packet_id) && JSON.stringify(item.packet_string)
+      // console.log("Alerts", $alerts_id.includes(item.packet_id))
+      return $alerts_id.includes(item.packet_id) && JSON.stringify(item.packet_string)
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
     } else{
@@ -100,9 +103,12 @@
           const pcapData = JSON.parse(event.data);
           console.log(
             "Got Packet Details s for Packet Id: ",
-            pcapData.packet_id
+            pcapData
           );
           ac_current_packet = pcapData;
+          // console.log("All Alerts", $alert_details)
+          // console.log("Alert Details", $alert_details[pcapData.packet_id])
+          ac_current_packet_alert = $alert_details[pcapData.packet_id]
           // is_loading = false;
           ac_hidden8 = false;
           // if (scroll_to_bottom) scrollToEnd();
@@ -208,15 +214,21 @@
       
 
       alert_ws.addEventListener("message", (event) => {
-        let data = event.data.split("_");
-        let packet_id = data[1];
-        let has_alert = data[2] === "true";
-        if (has_alert){
-            console.log("Alert Message", event.data);
-            alerts.update((v)=>{
-              return [...v, parseInt(packet_id)]
-            })
-          }                  
+        try{
+          let data = JSON.parse(event.data)
+          // console.log("Alert Message", data)
+          let packet_id = data.packet_id                                  
+              alerts_id.update((v)=>{
+                return [...v, parseInt(packet_id)]
+              })            
+              alert_details.update((v)=>{
+                v[packet_id] = data
+                return { ...v, v };                
+              })
+
+        } catch(e){
+          console.log("Ex", e)
+        }
       });
 
       alert_ws.addEventListener("error", (err) =>
@@ -384,27 +396,31 @@
         </div>
 
         <div class="w-1/3 ml-8 border-2 border-blue-900 p-8 bg-teal-800">
-          {#if ac_current_packet.has_alert}
-            {#if ac_current_packet.suricata_alert && ac_current_packet.suricata_alert.length > 0}
+          {#if ac_current_packet_alert.has_alert}
+            {#if ac_current_packet_alert.suricata_alert && ac_current_packet_alert.suricata_alert.length > 0}
               <p class="text-sm font-bold font-mono text-white mb-4">
-                Yara Rules
-              </p>
-              {#each ac_current_packet.suricata_alert as sa}
-                <p class="text-sm text-left font-mono text-white mb-1">
-                  {sa.alert_msg}
-                </p>
-              {/each}
-            {/if}
-
-            {#if ac_current_packet.yara_alert && ac_current_packet.yara_alert.length > 0}
-              <p class="text-sm font-bold font-mono text-white mb-4 mt-8">
                 Suricata Rules
               </p>
-              {#each ac_current_packet.yara_alert as ya}
-                <p class="text-sm text-left font-mono text-white mb-1">
-                  {ya.alert_msg}
-                </p>
-              {/each}
+              <ol>
+                {#each ac_current_packet_alert.suricata_alert as sa}
+                <li class="text-sm text-left font-mono text-white mb-1">
+                  {sa.alert_msg}
+                </li>
+                {/each}
+              </ol>
+            {/if}
+
+            {#if ac_current_packet_alert.yara_alert && ac_current_packet_alert.yara_alert.length > 0}
+              <p class="text-sm font-bold font-mono text-white mb-4 mt-8">
+                Yara Rules
+              </p>
+              <ol>
+                {#each ac_current_packet_alert.yara_alert as ya}
+                  <li class="text-sm text-left font-mono text-white mb-1">
+                    {ya.alert_msg}
+                  </li>
+                {/each}
+              </ol>
             {/if}
           {:else}
             <p class="text-sm font-bold font-mono text-white mb-4">
