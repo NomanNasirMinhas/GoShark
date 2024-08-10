@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         platform: [windows-latest, macos-latest]
-        go-version: [go1.22.6]
+        go-version: [go1.22]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
