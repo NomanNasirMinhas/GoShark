@@ -1,4 +1,4 @@
-module changeme
+module GoShark
 
 go 1.21
 
