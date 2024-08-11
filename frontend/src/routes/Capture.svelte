@@ -350,12 +350,12 @@
                     >{l.name}
                   </span>
                   {#if l.name !== "Payload"}
-                    <div class="grid grid-cols-4 gap-4">
+                    <div class="grid grid-cols-4 gap-4 break-words">
                       {#each Object.keys(l.layer) as key}
                         {#if key != "Contents" && key != "Payload" && l.layer[key] != null && checkType(l.layer[key]) === 0}                      
-                          <p class="text-xs text-white mr-8">
-                            <span class="font-bold font-serif">{key}: </span>
-                            <span class="font-thin font-serif"
+                          <p class="text-xs text-white mr-8 break-words">
+                            <span class="font-bold font-serif break-words">{key}: </span>
+                            <span class="font-thin font-serif break-words"
                               >{base64ToMacAddress(l.layer[key])
                                 ? base64ToMacAddress(l.layer[key])
                                 : l.layer[key]}</span
@@ -400,7 +400,7 @@
                         </h3> -->
                         <div class="flex flex-row break-words">
                           <code
-                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
+                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify break-words"
                           >
                             {decodeBase64(l.layer, "hex")}
                           </code>
@@ -408,7 +408,7 @@
                           <p class="w-16"></p>
 
                           <code
-                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
+                            class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify break-words"
                           >
                             {decodeBase64(l.layer, "utf-8")}
                           </code>
@@ -416,7 +416,7 @@
                       {/if}
                     </div>
                   {:else}
-                    <div class="mt-8">
+                    <div class="mt-8 break-words">
                       {#if l.layer.Contents}
                         <!-- <h3 class="text-sm font-bold font-serif text-white">
                           Data
