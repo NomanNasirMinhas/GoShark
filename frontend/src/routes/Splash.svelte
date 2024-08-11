@@ -41,7 +41,8 @@
     <div class="flex flex-col justify-evenly h-screen">
 
         <img alt="Wails logo" id="logo" src={logo} />
-        <h1 class="header h-64">GoShark</h1>
+        <h1 class="header h-64">
+          <span class="text-sky-500">Go</span><span class="text-amber-600">Shark</span></h1>
         <!-- <p style="margin-top: -50px;" class="text-lg dark:text-white">GoShark</p> -->
         <!-- <div class="result" id="result">{resultText}</div> -->
         {#if !isAdmin}
