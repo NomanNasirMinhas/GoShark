@@ -4,6 +4,13 @@
 
 GoLang based Wireless Network Analysis tool. This tool is designed to be a simple, easy to use, and fast wireless network analysis tool. It is designed to be used by network administrators, security professionals, and anyone else who needs to analyze wireless networks.
 
+## Pre-Reqs
+
+Make sure that libpcap is installed on your system as per your OS.
+
+Run the software with Administrator/Root privileges.
+
+
 ## Live Development
 
 To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
