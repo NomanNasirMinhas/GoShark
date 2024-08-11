@@ -84,7 +84,7 @@
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
     }} catch(e){
-      console.log("Exception", e)
+      // console.log("Exception", e)
       return item;
     }
   });
@@ -141,10 +141,10 @@
 
   function checkType(variable) {
     if (Array.isArray(variable)) {
-      console.log("Type Var", variable)
+      // console.log("Type Var", variable)
       return 1;
     } else if (variable !== null && typeof variable === 'object') {
-      console.log("Type Var", variable)
+      // console.log("Type Var", variable)
         return 2;
     } else {
         return 0;
@@ -173,7 +173,7 @@
 
       if (macAddress.length === 17) return macAddress;
     } catch (e) {
-      console.log("Mac Parse Exception", e);
+      // console.log("Mac Parse Exception", e);
     }
   }
 
@@ -264,7 +264,7 @@
       StartCapture(capture_iface, capture_promisc, "", export_file, true);
       capture_started = true;
     } catch (e) {
-      console.log(e);
+      // console.log(e);
     }
   }
 
@@ -578,9 +578,9 @@
             }}
             on:click={() => {
               is_loading = true
-              console.log("Clicked");
+              // console.log("Clicked");
               ac_current_packet = $packet_details[item.packet_id]
-              console.log("Selected", ac_current_packet)
+              // console.log("Selected", ac_current_packet)
               // packetDetails_ws.send(`pack-info_${item.packet_id}`);
               is_loading = false;
               ac_hidden8 = false;
