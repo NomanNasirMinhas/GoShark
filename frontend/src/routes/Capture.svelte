@@ -211,8 +211,7 @@
       default:
         return;
     }
-
-    // �i������[�9��b- Me"vF
+    
     result = result.replace(/[^a-zA-Z0-9 ]/g, '?');
     return result;
     // Convert binary string to a UTF-8 string
