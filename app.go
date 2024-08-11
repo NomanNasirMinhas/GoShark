@@ -324,9 +324,10 @@ type PacketInfo struct {
 var Max_Pack_ID = 0
 
 // PacketToJSON conver1ts a gopacket.Packet to a JSON string
-func PacketToJSON(packet gopacket.Packet) (PacketLayers, error) {
+func PacketToJSON(packet gopacket.Packet) (PacketLayers, string, error) {
 	var packetInfo PacketInfo
 	var packetDetails PacketLayers
+	app_layer_protocol := ""
 
 	Max_Pack_ID = Max_Pack_ID + 1
 	packetInfo.PacketID = int64(Max_Pack_ID)
@@ -382,10 +383,12 @@ func PacketToJSON(packet gopacket.Packet) (PacketLayers, error) {
 
 			if len(src_port_tokens) > 1 {
 				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(src_port_tokens[1], ")"))
+				app_layer_protocol = packetInfo.AppProtocol
 			}
 
 			if len(dst_port_tokens) > 1 {
 				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(dst_port_tokens[1], ")"))
+				app_layer_protocol = packetInfo.AppProtocol
 			}
 
 			// packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
@@ -404,10 +407,12 @@ func PacketToJSON(packet gopacket.Packet) (PacketLayers, error) {
 
 			if len(src_port_tokens) > 1 {
 				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(src_port_tokens[1], ")"))
+				app_layer_protocol = packetInfo.AppProtocol
 			}
 
 			if len(dst_port_tokens) > 1 {
 				packetInfo.AppProtocol = strings.ToUpper(strings.Trim(dst_port_tokens[1], ")"))
+				app_layer_protocol = packetInfo.AppProtocol
 			}
 			// packetInfo.AppProtocol, packetInfo.Color = GetAppProtocol(uint8(packetInfo.IP.Protocol), uint16(tcpPacket.DstPort))
 			// println("Destination Port", int(packetInfo.IP.Protocol), int(tcpPacket.DstPort))
@@ -439,10 +444,10 @@ func PacketToJSON(packet gopacket.Packet) (PacketLayers, error) {
 	// Convert to JSON
 	jsonData, err := json.Marshal(packetInfo)
 	if err != nil {
-		return packetDetails, err
+		return packetDetails, app_layer_protocol, err
 	}
 	broadcastMessage1(string(jsonData))
-	return packetDetails, nil
+	return packetDetails, app_layer_protocol, nil
 }
 
 func (a *App) IsRoot() bool {
@@ -572,14 +577,14 @@ func (a *App) StartCapture(iface string, promisc bool, filter string, export boo
 			handlePacketForSaving(packet)
 		}
 
-		packLayers, _ := PacketToJSON(packet)
+		packLayers, app_layer_protocol, _ := PacketToJSON(packet)
 
 		// go func() {
 
 		pack_info = append(pack_info, packLayers)
 		if len(suricataRules) > 0 {
 			// println("Checking for Suricata")
-			packLayers = checkforSuricataAlert(packLayers)
+			packLayers = checkforSuricataAlert(packLayers, app_layer_protocol)
 		}
 
 		if len(yaraRules) > 0 {
@@ -664,7 +669,7 @@ func (a *App) ParseSuricataRules(filename string, data []byte) bool {
 	}
 }
 
-func checkforSuricataAlert(packInfo PacketLayers) PacketLayers {
+func checkforSuricataAlert(packInfo PacketLayers, app_layer_protocol string) PacketLayers {
 	for _, rule := range suricataRules {
 		if (rule.Action() == "alert" || rule.Action() == "drop") && rule.Enabled {
 			// fmt.Printf("Rule -> %s, %s, %s\n\n", rule.Action(), rule.Header(), rule.Enabled)
@@ -677,7 +682,7 @@ func checkforSuricataAlert(packInfo PacketLayers) PacketLayers {
 			protocol, srcIP, srcPort, dstIP, dstPort := parseHeader(header_src, header_dst)
 			// fmt.Printf("Rules -> %s, %s, %s, %s, %s\n\n", protocol, srcIP, srcPort, dstIP, dstPort)
 			// Check the protocol
-			if checkProtocol(packInfo, protocol) {
+			if strings.EqualFold(strings.ToLower(protocol), strings.ToLower(app_layer_protocol)) || checkProtocol(packInfo, protocol) {
 				// println("Protocols matched")
 				// Check source and destination IP and ports
 				if checkIPandPort(packInfo, srcIP, srcPort, dstIP, dstPort) {

@@ -211,6 +211,9 @@
       default:
         return;
     }
+
+    // �i������[�9��b- Me"vF
+    result = result.replace(/[^a-zA-Z0-9 ]/g, '?');
     return result;
     // Convert binary string to a UTF-8 string
   }
@@ -408,7 +411,7 @@
                           <code
                             class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
                           >
-                            {decodeBase64(l.layer, "ascii")}
+                            {decodeBase64(l.layer, "utf-8")}
                           </code>
                         </div>
                       {/if}
@@ -431,7 +434,7 @@
                           <code
                             class="text-xs font-thin font-serif text-white break-words w-1/2 text-justify"
                           >
-                            {decodeBase64(l.layer.Contents, "ascii")}
+                            {decodeBase64(l.layer.Contents, "utf-8")}
                           </code>
                         </div>
                       {/if}
